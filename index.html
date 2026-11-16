@@ -1,0 +1,1713 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>픽셀 비례 랠리</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Jua&display=swap">
+<script src="lib/firebase-app-compat.js"></script>
+<script src="lib/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<style>
+/* 한 가지 모습(밤 서킷: 아스팔트 남색 바탕 + 형광 주황·연두)으로만 만든 게임 화면이에요.
+   레이아웃: 첫 화면은 가운데 한 줄 카드, 게임은 화면 가득 위에서 내려다보는 픽셀 트랙 + 관문에서 아래쪽 문제 창. */
+:root {
+  --bg: #12162a;
+  --panel: #1d2440;
+  --line: #36406e;
+  --ink: #f5f7ff;
+  --dim: #aeb6dd;
+  --hi: #ffb02e;        /* 강조(형광 주황) */
+  --lime: #9be564;
+  --red: #ff4d5e;
+  --red-d: #a3222f;
+  --bad: #ff4d6d;
+  --font-disp: 'Black Han Sans', 'Jua', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --font-ui: 'Jua', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 17px; overflow-x: hidden; }
+* { box-sizing: border-box; }
+button, input { font-family: inherit; font-size: inherit; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--hi); outline-offset: 2px; }
+.hide { display: none !important; }
+
+.page { max-width: 600px; margin: 0 auto; padding-block: 20px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 14px; }
+.logo { text-align: center; padding-top: 6px; }
+.logo .eb { font-size: 13px; color: var(--lime); letter-spacing: 1px; }
+.logo h1 { margin: 6px 0 4px; font-family: var(--font-disp); font-weight: normal; font-size: 48px; line-height: 1.05; color: var(--ink); text-shadow: 0 4px 0 #7a3a00, 0 0 22px rgba(255,176,46,.45); text-wrap: balance; }
+.logo h1 span { color: var(--hi); }
+.logo .sub { color: var(--dim); font-size: 15px; text-wrap: pretty; line-height: 1.5; }
+#demo { display: block; margin: 10px auto 0; width: 100%; max-width: 480px; height: auto; border-radius: 6px; image-rendering: pixelated; border: 3px solid var(--line); }
+.card { background: var(--panel); border: 2px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.card h2 { margin: 0; font-size: 20px; color: var(--hi); font-weight: normal; }
+label { font-size: 15px; color: var(--dim); }
+input[type=text] { width: 100%; padding: 12px; border-radius: 8px; border: 2px solid var(--line); background: var(--bg); color: var(--ink); min-height: 48px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.row2 > div { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.btn { min-height: 52px; border: 0; border-radius: 10px; background: var(--red); color: #fff; font-size: 20px; cursor: pointer; box-shadow: 0 4px 0 var(--red-d); padding: 0 12px; }
+.btn:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--red-d); }
+.btn.blue { background: #2f7fd0; box-shadow: 0 4px 0 #18508a; }
+.btn.green { background: #21a35f; box-shadow: 0 4px 0 #11663a; }
+.btn.ghost { background: transparent; border: 2px solid var(--line); color: var(--ink); box-shadow: none; font-size: 17px; }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn small { display: block; font-size: 13px; opacity: .85; }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.seg.four { grid-template-columns: repeat(4, 1fr); }
+.seg button { min-height: 44px; border-radius: 10px; border: 2px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; font-size: 15px; padding: 0 4px; }
+.seg button.on { border-color: var(--hi); background: #3a2a10; color: var(--hi); }
+.cpurow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.note { font-size: 14px; color: var(--dim); line-height: 1.5; }
+.note b { color: var(--hi); font-weight: normal; }
+.rules { margin: 0; padding-left: 20px; line-height: 1.6; font-size: 15px; }
+.rules b { color: var(--hi); font-weight: normal; }
+.warn { background: #3a1020; border: 2px solid var(--bad); border-radius: 10px; padding: 12px; font-size: 15px; line-height: 1.5; }
+.rank { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-variant-numeric: tabular-nums; }
+.rank li { display: grid; grid-template-columns: 34px 1fr auto; gap: 8px; padding: 6px 8px; border-radius: 6px; background: var(--bg); align-items: center; }
+.rank li .n { font-family: var(--font-disp); font-size: 16px; color: var(--hi); }
+.rank li .s { font-size: 15px; }
+.rank li .c { color: var(--dim); font-size: 13px; }
+details summary { cursor: pointer; color: var(--dim); }
+details[open] { display: flex; flex-direction: column; gap: 8px; }
+.code { font-family: var(--font-disp); font-size: 40px; color: var(--hi); text-align: center; letter-spacing: 8px; padding: 4px 0; font-variant-numeric: tabular-nums; }
+.rooms { display: flex; flex-direction: column; gap: 6px; }
+.rooms button { min-height: 50px; border-radius: 10px; border: 2px solid var(--lime); background: var(--bg); color: var(--ink); cursor: pointer; display: flex; justify-content: space-between; align-items: center; padding: 0 14px; font-size: 17px; }
+.rooms button span { font-family: var(--font-disp); font-size: 17px; color: var(--hi); }
+.players { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.pl { padding: 10px; border-radius: 8px; background: var(--bg); border: 2px solid var(--c, var(--line)); font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl.empty { color: var(--dim); border-style: dashed; border-color: var(--line); }
+.joinrow { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.big { font-family: var(--font-disp); font-size: 40px; color: var(--hi); text-align: center; }
+.tblwrap { overflow-x: auto; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
+.tbl th, .tbl td { padding: 6px 4px; text-align: center; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.tbl th { color: var(--dim); font-weight: normal; font-size: 13px; }
+.tbl tr.me td { color: var(--hi); }
+.tbl td.nm { text-align: left; }
+.wrongs { display: flex; flex-direction: column; gap: 8px; }
+.wrongs .w { background: var(--bg); border-radius: 8px; padding: 10px; font-size: 15px; line-height: 1.5; display: flex; flex-direction: column; gap: 4px; }
+.wrongs .w .a { color: var(--lime); }
+.wrongs .w .e { color: var(--dim); font-size: 14px; }
+#toast { position: fixed; left: 50%; top: 58px; transform: translateX(-50%); background: rgba(18,22,42,.94); border: 2px solid var(--hi); color: var(--ink); padding: 8px 16px; border-radius: 99px; font-size: 16px; z-index: 60; pointer-events: none; max-width: calc(100% - 32px); text-align: center; }
+
+/* ===== 게임 화면 ===== */
+#game { position: fixed; inset: 0; background: #000; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+#view { position: absolute; inset: 0; overflow: hidden; }
+#cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+#tags { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.tg { position: absolute; left: 0; top: 0; transform: translate(-50%, -100%); font-size: 13px; padding: 1px 6px; border-radius: 6px; background: rgba(0,0,0,.55); color: #fff; white-space: nowrap; border-bottom: 3px solid var(--c); }
+.tg.me { background: rgba(255,176,46,.9); color: #1a1000; }
+.hudtop { position: absolute; top: max(8px, env(safe-area-inset-top, 0px)); left: max(8px, env(safe-area-inset-left, 0px)); right: 136px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; pointer-events: none; }
+.hudtop > * { pointer-events: auto; }
+.pill { background: rgba(10,12,28,.78); border: 2px solid var(--line); border-radius: 99px; padding: 4px 12px; font-size: 16px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pill b { font-family: var(--font-disp); font-weight: normal; color: var(--hi); font-size: 18px; }
+.pill.place b { font-size: 26px; line-height: 1; }
+.pill.place small { font-size: 14px; color: var(--dim); }
+#gateDots { letter-spacing: 1px; font-size: 12px; color: var(--lime); }
+.icon { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--line); background: rgba(10,12,28,.78); color: #fff; font-size: 18px; cursor: pointer; }
+#mini { position: absolute; top: max(8px, env(safe-area-inset-top, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); width: 120px; height: 92px; border-radius: 8px; background: rgba(10,12,28,.6); border: 2px solid var(--line); image-rendering: pixelated; }
+#feed { position: absolute; top: 108px; right: max(8px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 4px; align-items: flex-end; pointer-events: none; max-width: 60%; }
+#feed div { background: rgba(10,12,28,.8); border-radius: 8px; padding: 3px 10px; font-size: 14px; }
+#banner { position: absolute; left: 50%; top: 32%; transform: translate(-50%, -50%); font-family: var(--font-disp); font-size: 72px; color: var(--hi); text-shadow: 0 5px 0 #6a2c00, 0 0 24px rgba(0,0,0,.6); pointer-events: none; text-align: center; white-space: nowrap; }
+#banner small { display: block; font-family: var(--font-ui); font-size: 20px; color: #fff; text-shadow: 0 2px 0 #000; }
+#wrongway { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); background: var(--red); padding: 6px 16px; border-radius: 10px; font-size: 20px; pointer-events: none; }
+.itembox { position: absolute; right: max(12px, env(safe-area-inset-right, 0px)); bottom: max(108px, calc(env(safe-area-inset-bottom, 0px) + 108px)); width: 74px; height: 74px; border-radius: 14px; border: 3px solid var(--hi); background: rgba(10,12,28,.8); color: #fff; font-size: 38px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+.itembox small { font-size: 11px; color: var(--dim); margin-top: 3px; }
+.itembox.empty { border-color: var(--line); opacity: .7; }
+.itembox.spin span { animation: roll .12s linear infinite; }
+@keyframes roll { 50% { transform: translateY(-4px) scale(.85); } }
+.tpad { position: absolute; bottom: max(14px, env(safe-area-inset-bottom, 0px)); display: flex; gap: 10px; }
+#padL { left: max(14px, env(safe-area-inset-left, 0px)); }
+#padR { right: max(14px, env(safe-area-inset-right, 0px)); }
+.tb { width: 80px; height: 80px; border-radius: 18px; border: 3px solid rgba(255,255,255,.35); background: rgba(10,12,28,.45); color: #fff; font-size: 34px; touch-action: none; cursor: pointer; }
+.tb.sm { width: 62px; }
+.tb.on { background: rgba(255,176,46,.55); border-color: var(--hi); }
+@media (hover: hover) and (pointer: fine) { .tpad { display: none; } .itembox { bottom: 16px; } }
+#qp { position: absolute; left: 50%; bottom: max(8px, env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(760px, calc(100% - 16px)); max-height: calc(100% - 70px); overflow-y: auto; background: rgba(18,22,42,.96); border: 3px solid var(--hi); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; z-index: 5; }
+.qtop { display: flex; gap: 6px; align-items: center; }
+.tag { font-size: 14px; padding: 2px 10px; border-radius: 99px; background: #3a2a10; color: var(--hi); white-space: nowrap; }
+.tag.y { background: #1f3a2a; color: var(--lime); overflow: hidden; text-overflow: ellipsis; }
+.tag.t { font-variant-numeric: tabular-nums; min-width: 44px; text-align: center; }
+.qtime { flex: 1; height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; min-width: 30px; }
+.qtime i { display: block; height: 100%; width: 100%; background: var(--lime); border-radius: 4px; }
+.qtext { font-size: 21px; line-height: 1.45; text-wrap: pretty; word-break: keep-all; }
+.opts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.opts button { min-height: 54px; border-radius: 10px; border: 2px solid var(--line); background: var(--bg); color: var(--ink); font-size: 19px; cursor: pointer; text-align: left; padding: 6px 10px; display: flex; gap: 8px; align-items: center; line-height: 1.3; }
+.opts button i { font-style: normal; flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--line); display: grid; place-items: center; font-size: 14px; }
+.opts button.ok { border-color: var(--lime); background: #1f3a2a; }
+.opts button.no { border-color: var(--bad); background: #3a1020; }
+.numin { display: flex; flex-direction: column; gap: 8px; }
+.numrow { display: grid; grid-template-columns: 1fr 110px; gap: 8px; }
+.numbox { min-height: 54px; border-radius: 10px; border: 3px solid var(--hi); background: var(--bg); font-family: var(--font-disp); font-size: 32px; display: flex; align-items: center; justify-content: flex-end; padding: 0 14px; font-variant-numeric: tabular-nums; letter-spacing: 1px; }
+.numbox:empty::before { content: '숫자 입력'; color: var(--dim); font-family: var(--font-ui); font-size: 18px; }
+.unitnote { font-size: 14px; color: var(--dim); }
+.unitnote b { color: var(--hi); font-weight: normal; }
+.keys { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.keys button { min-height: 48px; border-radius: 10px; border: 2px solid var(--line); background: #252d52; color: #fff; font-size: 22px; cursor: pointer; font-family: var(--font-disp); }
+.keys button:active { background: var(--hi); color: #1a1000; }
+.qres { font-size: 18px; line-height: 1.5; padding: 8px 10px; border-radius: 10px; }
+.qres.ok { background: #1f3a2a; color: var(--lime); }
+.qres.no { background: #3a1020; }
+.qres .e { display: block; font-size: 16px; color: var(--dim); margin-top: 2px; }
+@media (max-width: 560px) { .qtext { font-size: 18px; } .opts button { font-size: 16px; min-height: 48px; } .keys { grid-template-columns: repeat(4, 1fr); } .keys button { min-height: 42px; } .hudtop { right: 8px; top: 106px; } .pill { font-size: 14px; padding: 3px 9px; } .pill b { font-size: 16px; } .pill.place b { font-size: 22px; } #feed { top: 150px; } }
+@media (max-height: 520px) { .qtext { font-size: 17px; } .keys button, .opts button { min-height: 40px; } #qp { gap: 6px; padding: 8px 10px; } .numbox { min-height: 44px; font-size: 26px; } }
+</style>
+</head>
+<body>
+
+<div id="home" class="page">
+  <div class="logo">
+    <div class="eb">6-2 · 4단원 비례식과 비례배분 · 단원 복습 레이스</div>
+    <h1>픽셀 <span>비례 랠리</span></h1>
+    <div class="sub">문제 관문에서 ⭐·⭐⭐·⭐⭐⭐ 길을 골라 들어가 문제를 맞히면 🚀 터보와 🎁 아이템! 친구 4명과 함께 3바퀴를 먼저 도는 사람이 이겨요.</div>
+    <canvas id="demo" width="240" height="96" aria-hidden="true"></canvas>
+  </div>
+  <div id="inapp" class="warn hide">카카오톡·네이버 같은 앱 안에서 열렸어요. 경주 연결이 안 될 수 있으니 오른쪽 위 메뉴에서 <b>다른 브라우저로 열기</b>를 눌러 주세요.</div>
+  <div id="nofb" class="warn hide"></div>
+  <div class="card">
+    <div class="row2">
+      <div><label for="nm">이름</label><input type="text" id="nm" maxlength="10" autocomplete="off" placeholder="예: 김하늘"></div>
+      <div><label for="cl">반 코드</label><input type="text" id="cl" maxlength="20" autocomplete="off" placeholder="예: 옥정초604"></div>
+    </div>
+    <button class="btn" id="goNet">🏁 친구와 온라인 경주<small id="netSub">각자 기기에서 2~5명 동시 출발</small></button>
+    <div class="note">🤖 컴퓨터와 연습 · 컴퓨터 실력</div>
+    <div class="seg" id="lvSeg"><button data-lv="0">🙂 쉬움</button><button data-lv="1" class="on">😎 보통</button><button data-lv="2">🔥 어려움</button></div>
+    <div class="note">트랙</div>
+    <div class="seg four" id="trSeg"><button data-tr="-1" class="on">🎲 무작위</button><button data-tr="0">🌸 벚꽃</button><button data-tr="1">🏜️ 사막</button><button data-tr="2">❄️ 눈꽃</button></div>
+    <div class="cpurow"><button class="btn blue" data-cpu="1">🤖 1명과</button><button class="btn blue" data-cpu="2">🤖 2명과</button><button class="btn blue" data-cpu="4">🤖 4명과</button></div>
+    <div id="homeMsg" class="note" role="status"></div>
+  </div>
+  <div class="card">
+    <h2>게임 방법</h2>
+    <ul class="rules">
+      <li>한 판에 <b>2~5명</b>이 <b>3바퀴</b>를 달려요. 바퀴마다 <b>문제 관문 4곳</b>이 있어요. 관문에 닿으면 차가 멈추고 문제가 나와요.</li>
+      <li>관문 앞 길이 세 갈래로 칠해져 있어요. 왼쪽 <b>⭐ 쉬운 길</b> · 가운데 <b>⭐⭐ 보통 길</b> · 오른쪽 <b>⭐⭐⭐ 도전 길</b>. 들어간 길의 문제가 나와요.</li>
+      <li>맞히면 문제 점수(⭐10 · ⭐⭐20 · ⭐⭐⭐30)와 <b>🚀 터보</b>(⭐ 1.4초 · ⭐⭐ 2.2초 · ⭐⭐⭐ 3초), 그리고 <b>🎁 아이템</b>(⭐은 60% 확률)을 받아요. 틀리면 정답과 풀이를 3.5초 동안 보고 출발해요.</li>
+      <li><b>문장제는 답을 직접 입력</b>해요. <b>단위는 쓰지 않고 숫자만</b> 써요(예: 12 kg → <b>12</b>). 나머지는 4개 중에서 골라요.</li>
+      <li>아이템 — 🚀 터보 로켓 · 💧 물풍선(바로 앞 친구를 빙글빙글) · 🍯 꿀 웅덩이(뒤에 놓으면 밟은 차가 느려져요) · 🫧 비눗방울 방패(공격 한 번 막기) · 🌟 별똥 질주(뒤쪽 순위만, 빠르고 무적). 뒤에 있을수록 좋은 아이템이 잘 나와요.</li>
+      <li>길 밖(잔디·모래·눈)은 느려요. 길 위의 <b>⚡ 화살표 판</b>을 밟으면 빨라져요.</li>
+      <li>1등이 들어오면 <b>30초 뒤</b> 경주가 끝나요. 점수 = 순위 점수(1~5등 100·70·50·35·25) + 문제 점수.</li>
+      <li>조종 — 컴퓨터: <b>←·→</b>(A·D) 방향, <b>↓</b>(S) 브레이크, <b>스페이스</b> 아이템, 문제는 <b>1~4</b> 또는 숫자 입력 후 <b>Enter</b>. 태블릿·휴대폰: 왼쪽 아래 <b>◀ ▶</b>, 오른쪽 아래 <b>🎁</b>·<b>▼</b>. 차는 저절로 앞으로 가요.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h2 id="rkTitle">순위</h2>
+    <ol class="rank" id="rkHome"><li><span class="n">…</span><span class="s">불러오는 중</span><span></span></li></ol>
+  </div>
+  <div class="note">문항: 수학 6-2 교과서 80~91쪽·96~98쪽, 수학익힘 56~70쪽 유형 <span id="qCount"></span>문항(비의 성질 · 간단한 자연수의 비 · 비례식 · 비례식의 성질 · 비례식 활용 · 비례배분 · 단원 마무리). 트랙·차·아이템은 이 게임용으로 새로 그렸어요.</div>
+  <div class="card">
+    <details>
+      <summary>👩‍🏫 선생님 메뉴</summary>
+      <label for="tPin">비밀번호 (firebase-config.js의 TEACHER_PIN)</label>
+      <input type="text" id="tPin" inputmode="numeric" autocomplete="off" style="-webkit-text-security:disc">
+      <label for="tCls">반 코드 <span class="note">(비우면 전체)</span></label>
+      <input type="text" id="tCls" maxlength="20" autocomplete="off">
+      <button class="btn blue" id="tBtn3" data-what="csv">📥 경주 기록 내려받기 (엑셀용 CSV)</button>
+      <button class="btn ghost" id="tBtn" data-what="rec">경주 기록 초기화</button>
+      <button class="btn ghost" id="tBtn4" data-what="room">지난 게임 방 정리 (수업이 끝난 뒤)</button>
+      <div id="tMsg" class="note">초기화하기 전에 지울 내용이 CSV 파일로 먼저 내려받아져요. 기록은 파이어베이스 콘솔(Realtime Database의 snow → kart 아래)에서도 볼 수 있어요.</div>
+    </details>
+  </div>
+
+</div>
+
+<div id="lobby" class="page hide">
+  <div class="logo"><h1 style="font-size:34px">🏁 온라인 경주</h1><div class="sub" id="lbWho"></div></div>
+  <div class="card" id="lbMatchCard">
+    <h2>함께 달릴 친구 찾기 (2~5명)</h2>
+    <button class="btn" id="lbQuick">🎲 빠른 매칭<small>같은 반 코드의 기다리는 방에 자동으로 들어가요</small></button>
+    <button class="btn ghost" id="mkRoom">🏠 새 방 만들기 (번호를 친구에게 알려 주기)</button>
+  </div>
+  <div class="card hide" id="lbWait">
+    <h2>대기실</h2>
+    <div class="code" id="lbCode">----</div>
+    <div class="players" id="lbPlayers"></div>
+    <div class="note" id="lbWaitMsg" role="status">친구가 들어오면 시작해요.</div>
+    <button class="btn green hide" id="lbStart">▶ 지금 출발</button>
+    <button class="btn ghost" id="lbCancel">대기실 나가기</button>
+  </div>
+  <div class="card" id="lbJoinCard">
+    <h2>친구 방에 들어가기</h2>
+    <div class="joinrow"><input type="text" id="lbIn" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="방 번호 4자리"><button class="btn blue" id="lbJoin">들어가기</button></div>
+    <div class="note">같은 반 코드의 기다리는 방</div>
+    <div class="rooms" id="lbRooms"><div class="note">찾는 중…</div></div>
+  </div>
+  <div id="lbMsg" class="note" role="status"></div>
+  <button class="btn ghost" id="lbBack">← 처음으로</button>
+</div>
+
+<div id="game" class="hide">
+  <div id="view">
+    <canvas id="cv"></canvas>
+    <div id="tags"></div>
+    <div class="hudtop">
+      <button class="icon" id="quitBtn" aria-label="그만하기">✕</button>
+      <div class="pill place"><b id="placeN">1</b><small>등 / <span id="placeOf">5</span></small></div>
+      <div class="pill">🏁 <b id="lapN">1</b>/3바퀴 <span id="gateDots"></span></div>
+      <div class="pill">🏆 <b id="scoreN">0</b>점</div>
+      <div class="pill" id="clock">0:00</div>
+      <button class="icon" id="sndBtn" aria-label="소리 켜기·끄기">🔊</button>
+    </div>
+    <canvas id="mini" width="120" height="92"></canvas>
+    <div id="feed"></div>
+    <div id="banner"></div>
+    <div id="wrongway" class="hide">↩ 거꾸로 가고 있어요!</div>
+    <button id="itemBtn" class="itembox" aria-label="아이템 쓰기"><span id="itemIc"></span><small>스페이스</small></button>
+    <div class="tpad" id="padL"><button class="tb" data-k="l" aria-label="왼쪽">◀</button><button class="tb" data-k="r" aria-label="오른쪽">▶</button></div>
+    <div class="tpad" id="padR"><button class="tb sm" data-k="b" aria-label="브레이크">▼</button><button class="tb" data-k="i" aria-label="아이템">🎁</button></div>
+    <div id="qp" class="hide" aria-live="polite">
+      <div class="qtop"><span class="tag" id="qTag">⭐</span><span class="tag y" id="qLes"></span><span class="qtime"><i id="qBar"></i></span><span class="tag t" id="qSec">20</span></div>
+      <div class="qtext" id="qText"></div>
+      <div class="opts" id="qOpts"></div>
+      <div class="numin hide" id="qNum">
+        <div class="numrow"><div class="numbox" id="qBox" aria-label="입력한 답"></div><button class="btn green" id="qOk">확인</button></div>
+        <div class="unitnote">✏️ 단위는 쓰지 않고 <b>숫자만</b> 입력해요</div>
+        <div class="keys" id="qKeys"></div>
+      </div>
+      <div class="qres hide" id="qRes"></div>
+    </div>
+  </div>
+</div>
+
+<div id="result" class="page hide">
+  <div class="big" id="rsHead">🏁 경주 끝!</div>
+  <div class="note" id="rsSub" style="text-align:center"></div>
+  <div class="card tblwrap"><table class="tbl" id="rsTbl"></table></div>
+  <div class="card hide" id="rsSaveCard"><div class="note" id="rsSave" role="status"></div></div>
+  <div class="card">
+    <h2>틀린 문제 다시 보기</h2>
+    <div class="wrongs" id="rsWrong"></div>
+  </div>
+  <button class="btn" id="rsAgain">🔁 한 판 더</button>
+  <button class="btn ghost" id="rsHome">← 처음으로</button>
+</div>
+<div id="toast" class="hide"></div>
+
+<script>
+// ===== 픽셀 비례 랠리 =====
+// 문항: 6-2 4단원 「비례식과 비례배분」 단원 복습. [번호, 차시(1~7), 단계(1~3), 종류(0 고르기 · 1 숫자 입력), 문제, 보기, 정답 번호, 정답(숫자), 풀이]
+// 장르(위에서 내려다보는 아이템 카트 경주)만 참고해서 새로 만든 게임이에요. 트랙·차·아이템·이름은 모두 이 게임용으로 코드로 그렸어요.
+var QD = [[1,1,3,1,"국기를 그리려고 합니다. 가로와 세로의 비가 3：2가 되도록 그릴 때, 가로가 24 cm라면 세로는 몇 cm인가요?",null,null,"16","두 양의 비와 비율이 같은 비를 만들어 구해요(전항과 후항에 0이 아닌 같은 수를 곱하거나 나누기). (정답: 16)"],[2,1,3,1,"비눗방울 놀이를 위해 세제 용액과 물을 2：1로 섞으려고 합니다. 비율이 같도록 세제 용액을 8컵 넣는다면 물은 몇 컵 넣어야 하나요?",null,null,"4","두 양의 비와 비율이 같은 비를 만들어 구해요(전항과 후항에 0이 아닌 같은 수를 곱하거나 나누기). (정답: 4)"],[3,1,3,1,"가로 4 cm, 세로 3 cm인 사진을 가로와 세로의 비율이 같도록 확대하였더니 가로가 20 cm가 되었습니다. 확대한 사진의 세로는 몇 cm인가요?",null,null,"15","두 양의 비와 비율이 같은 비를 만들어 구해요(전항과 후항에 0이 아닌 같은 수를 곱하거나 나누기). (정답: 15)"],[4,1,3,1,"어떤 주스는 오렌지 원액과 물을 3：5로 섞어 만듭니다. 비율이 같도록 오렌지 원액을 12컵 넣는다면 물은 몇 컵 넣어야 하나요?",null,null,"20","두 양의 비와 비율이 같은 비를 만들어 구해요(전항과 후항에 0이 아닌 같은 수를 곱하거나 나누기). (정답: 20)"],[5,1,3,1,"비눗방울 놀이를 위해 세제 용액과 물을 2：1로 섞으려고 합니다. 비율이 같도록 세제 용액을 6컵 넣는다면 물은 몇 컵 넣어야 하나요?",null,null,"3","두 양의 비와 비율이 같은 비를 만들어 구해요(전항과 후항에 0이 아닌 같은 수를 곱하거나 나누기). (정답: 3)"],[6,1,3,1,"밀가루와 설탕을 7：2로 섞어 쿠키 반죽을 만듭니다. 비율이 같도록 설탕을 10숟가락 넣는다면 밀가루는 몇 숟가락 넣어야 하나요?",null,null,"35","두 양의 비와 비율이 같은 비를 만들어 구해요(전항과 후항에 0이 아닌 같은 수를 곱하거나 나누기). (정답: 35)"],[7,1,3,1,"꽃다발 1개를 만드는 데 초록 색종이 2장과 빨간 색종이 3장이 필요합니다. 초록 색종이와 빨간 색종이 수의 비율이 같도록 빨간 색종이 18장을 모두 사용한다면, 초록 색종이는 몇 장 필요한가요?",null,null,"12","두 양의 비와 비율이 같은 비를 만들어 구해요(전항과 후항에 0이 아닌 같은 수를 곱하거나 나누기). (정답: 12)"],[8,1,3,1,"꽃다발 1개를 만드는 데 초록 색종이 2장과 빨간 색종이 3장이 필요합니다. 초록 색종이와 빨간 색종이 수의 비율이 같도록 빨간 색종이 21장을 모두 사용한다면, 초록 색종이는 몇 장 필요한가요?",null,null,"14","두 양의 비와 비율이 같은 비를 만들어 구해요(전항과 후항에 0이 아닌 같은 수를 곱하거나 나누기). (정답: 14)"],[9,1,3,1,"꽃다발 1개를 만드는 데 초록 색종이 2장과 빨간 색종이 3장이 필요합니다. 초록 색종이와 빨간 색종이 수의 비율이 같도록 초록 색종이 8장을 모두 사용한다면, 빨간 색종이는 몇 장 필요한가요?",null,null,"12","두 양의 비와 비율이 같은 비를 만들어 구해요(전항과 후항에 0이 아닌 같은 수를 곱하거나 나누기). (정답: 12)"],[10,1,3,1,"비눗방울 놀이를 위해 세제 용액과 물을 2：1로 섞으려고 합니다. 비율이 같도록 세제 용액을 10컵 넣는다면 물은 몇 컵 넣어야 하나요?",null,null,"5","두 양의 비와 비율이 같은 비를 만들어 구해요(전항과 후항에 0이 아닌 같은 수를 곱하거나 나누기). (정답: 5)"],[11,1,3,1,"우유와 초코 시럽을 9：2로 섞어 초코우유를 만듭니다. 비율이 같도록 우유를 27컵 넣는다면 초코 시럽은 몇 컵 넣어야 하나요?",null,null,"6","두 양의 비와 비율이 같은 비를 만들어 구해요(전항과 후항에 0이 아닌 같은 수를 곱하거나 나누기). (정답: 6)"],[12,1,3,1,"꽃다발 1개를 만드는 데 초록 색종이 2장과 빨간 색종이 3장이 필요합니다. 초록 색종이와 빨간 색종이 수의 비율이 같도록 초록 색종이 10장을 모두 사용한다면, 빨간 색종이는 몇 장 필요한가요?",null,null,"15","두 양의 비와 비율이 같은 비를 만들어 구해요(전항과 후항에 0이 아닌 같은 수를 곱하거나 나누기). (정답: 15)"],[13,1,3,1,"빨간 물감과 파란 물감을 2：5로 섞어 보라색을 만들었습니다. 같은 색을 만들려면 빨간 물감 6방울에 파란 물감을 몇 방울 섞어야 하나요?",null,null,"15","두 양의 비와 비율이 같은 비를 만들어 구해요(전항과 후항에 0이 아닌 같은 수를 곱하거나 나누기). (정답: 15)"],[14,1,1,0,"비 15：4에서 후항은 무엇인가요?",["19","15","4","60"],2,null,"기호 '：' 앞에 있는 수가 전항, 뒤에 있는 수가 후항이에요."],[15,1,2,0,"9：6과 비율이 같지 않은 비는 어느 것인가요?",["27：18","13：10","36：24","3：2"],1,null,"정답: 13：10. 비의 전항과 후항에 0이 아닌 같은 수를 곱하거나 나누어도 비율은 같아요(같은 수를 더하거나 빼면 비율이 달라져요)."],[16,1,3,0,"텔레비전 화면을 고르려고 합니다. 화면의 가로와 세로의 비가 16：9와 같은 것은 어느 것인가요?",["가로 40 cm, 세로 30 cm","가로 27 cm, 세로 48 cm","가로 48 cm, 세로 27 cm","가로 50 cm, 세로 29 cm"],2,null,"정답: 가로 48 cm, 세로 27 cm. 비의 전항과 후항에 0이 아닌 같은 수를 곱하거나 나누어도 비율은 같아요(같은 수를 더하거나 빼면 비율이 달라져요)."],[17,1,1,0,"비 3：8에서 전항은 무엇인가요?",["8","3","5","11"],1,null,"기호 '：' 앞에 있는 수가 전항, 뒤에 있는 수가 후항이에요."],[18,1,2,0,"비의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. 14：16 = □：8",["7","6","14","8"],0,null,"14：16의 전항과 후항을 2로 나누면 7：8이에요. 비의 전항과 후항에 0이 아닌 같은 수를 곱하거나 나누어도 비율은 같아요."],[19,1,3,0,"모니터 화면을 고르려고 합니다. 화면의 가로와 세로의 비가 16：9와 같은 것은 어느 것인가요?",["가로 18 cm, 세로 11 cm","가로 20 cm, 세로 15 cm","가로 32 cm, 세로 18 cm","가로 9 cm, 세로 16 cm"],2,null,"정답: 가로 32 cm, 세로 18 cm. 비의 전항과 후항에 0이 아닌 같은 수를 곱하거나 나누어도 비율은 같아요(같은 수를 더하거나 빼면 비율이 달라져요)."],[20,1,1,0,"비 12：5에서 후항은 무엇인가요?",["12","5","60","17"],1,null,"기호 '：' 앞에 있는 수가 전항, 뒤에 있는 수가 후항이에요."],[21,1,2,0,"비의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. 18：27 = □：3",["2","3","9","4"],0,null,"18：27의 전항과 후항을 9로 나누면 2：3이에요. 비의 전항과 후항에 0이 아닌 같은 수를 곱하거나 나누어도 비율은 같아요."],[22,1,3,0,"어느 반의 안경을 쓴 학생 수와 안경을 쓰지 않은 학생 수의 비는 8：12입니다. 이 비의 전항과 후항을 4로 나눈 비는 어느 것인가요?",["3：2","4：8","2：12","2：3"],3,null,"정답: 2：3. 비의 전항과 후항에 0이 아닌 같은 수를 곱하거나 나누어도 비율은 같아요(같은 수를 더하거나 빼면 비율이 달라져요)."],[23,1,1,0,"비 6：11에서 후항은 무엇인가요?",["6","66","17","11"],3,null,"기호 '：' 앞에 있는 수가 전항, 뒤에 있는 수가 후항이에요."],[24,1,2,0,"비의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. 15：18 = 5：□",["9","5","8","6"],3,null,"15：18의 전항과 후항을 3으로 나누면 5：6이에요. 비의 전항과 후항에 0이 아닌 같은 수를 곱하거나 나누어도 비율은 같아요."],[25,1,3,0,"전자 칠판 화면을 고르려고 합니다. 화면의 가로와 세로의 비가 16：9와 같은 것은 어느 것인가요?",["가로 64 cm, 세로 36 cm","가로 36 cm, 세로 64 cm","가로 32 cm, 세로 24 cm","가로 60 cm, 세로 32 cm"],0,null,"정답: 가로 64 cm, 세로 36 cm. 비의 전항과 후항에 0이 아닌 같은 수를 곱하거나 나누어도 비율은 같아요(같은 수를 더하거나 빼면 비율이 달라져요)."],[26,1,1,0,"비 5：9에서 전항은 무엇인가요?",["14","4","9","5"],3,null,"기호 '：' 앞에 있는 수가 전항, 뒤에 있는 수가 후항이에요."],[27,1,2,0,"비 4：6의 비율을 기약분수로 나타내면 얼마인가요?",["3/2","2/5","2/3","4/10"],2,null,"정답: 2/3. 비의 전항과 후항에 0이 아닌 같은 수를 곱하거나 나누어도 비율은 같아요(같은 수를 더하거나 빼면 비율이 달라져요)."],[28,1,3,0,"어느 학교의 남학생 수와 여학생 수의 비는 5：6입니다. 이 비와 비율이 같은 것은 어느 것인가요?",["남학생 150명, 여학생 151명","남학생 150명, 여학생 180명","남학생 180명, 여학생 150명","남학생 105명, 여학생 106명"],1,null,"정답: 남학생 150명, 여학생 180명. 비의 전항과 후항에 0이 아닌 같은 수를 곱하거나 나누어도 비율은 같아요(같은 수를 더하거나 빼면 비율이 달라져요)."],[29,1,1,0,"비 7：4에서 후항은 무엇인가요?",["7","11","4","28"],2,null,"기호 '：' 앞에 있는 수가 전항, 뒤에 있는 수가 후항이에요."],[30,1,2,0,"비의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. 28：21 = 4：□",["3","10","4","6"],0,null,"28：21의 전항과 후항을 7로 나누면 4：3이에요. 비의 전항과 후항에 0이 아닌 같은 수를 곱하거나 나누어도 비율은 같아요."],[31,1,1,0,"비 9：2에서 전항은 무엇인가요?",["9","11","7","2"],0,null,"기호 '：' 앞에 있는 수가 전항, 뒤에 있는 수가 후항이에요."],[32,1,2,0,"비의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. 9：4 = □：8",["8","13","27","18"],3,null,"9：4의 전항과 후항에 2를 곱하면 18：8이에요. 비의 전항과 후항에 0이 아닌 같은 수를 곱하거나 나누어도 비율은 같아요."],[33,1,1,0,"비 10：3에서 전항은 무엇인가요?",["3","7","13","10"],3,null,"기호 '：' 앞에 있는 수가 전항, 뒤에 있는 수가 후항이에요."],[34,1,2,0,"비의 성질로 옳은 것은 어느 것인가요?",["비의 전항과 후항에서 같은 수를 빼도 비율은 같습니다.","비의 후항만 같은 수로 나누어도 비율은 같습니다.","비의 전항과 후항을 0이 아닌 같은 수로 나누어도 비율은 같습니다.","비의 전항과 후항을 0으로 나누어도 비율은 같습니다."],2,null,"정답: 비의 전항과 후항을 0이 아닌 같은 수로 나누어도 비율은 같습니다. 비의 전항과 후항에 0이 아닌 같은 수를 곱하거나 나누어도 비율은 같아요(같은 수를 더하거나 빼면 비율이 달라져요)."],[35,1,2,0,"4：9와 비율이 같지 않은 비는 어느 것인가요?",["16：36","8：18","12：27","12：17"],3,null,"정답: 12：17. 비의 전항과 후항에 0이 아닌 같은 수를 곱하거나 나누어도 비율은 같아요(같은 수를 더하거나 빼면 비율이 달라져요)."],[36,1,2,0,"40：56의 전항과 후항을 0이 아닌 같은 수로 나누어 5：7을 만들었습니다. 나눈 수는 얼마인가요?",["8","9","35","49"],0,null,"정답: 8. 비의 전항과 후항에 0이 아닌 같은 수를 곱하거나 나누어도 비율은 같아요(같은 수를 더하거나 빼면 비율이 달라져요)."],[37,1,2,0,"6：9의 전항과 후항에 0이 아닌 같은 수를 곱하여 18：27을 만들었습니다. 곱한 수는 얼마인가요?",["4","18","3","12"],2,null,"정답: 3. 비의 전항과 후항에 0이 아닌 같은 수를 곱하거나 나누어도 비율은 같아요(같은 수를 더하거나 빼면 비율이 달라져요)."],[38,1,2,0,"비의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. 30：12 = 5：□",["5","2","3","6"],1,null,"30：12의 전항과 후항을 6으로 나누면 5：2예요. 비의 전항과 후항에 0이 아닌 같은 수를 곱하거나 나누어도 비율은 같아요."],[39,1,2,0,"45：30과 비율이 같은 비는 어느 것인가요?",["6：6","4：3","2：3","3：2"],3,null,"정답: 3：2. 비의 전항과 후항에 0이 아닌 같은 수를 곱하거나 나누어도 비율은 같아요(같은 수를 더하거나 빼면 비율이 달라져요)."],[40,1,2,0,"비의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. 4：9 = □：27",["27","22","16","12"],3,null,"4：9의 전항과 후항에 3을 곱하면 12：27이에요. 비의 전항과 후항에 0이 아닌 같은 수를 곱하거나 나누어도 비율은 같아요."],[41,1,2,0,"비의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. 20：35 = □：7",["7","4","5","8"],1,null,"20：35의 전항과 후항을 5로 나누면 4：7이에요. 비의 전항과 후항에 0이 아닌 같은 수를 곱하거나 나누어도 비율은 같아요."],[42,1,2,0,"5：2와 비율이 같은 비는 어느 것인가요?",["15：6","8：5","6：15","15：8"],0,null,"정답: 15：6. 비의 전항과 후항에 0이 아닌 같은 수를 곱하거나 나누어도 비율은 같아요(같은 수를 더하거나 빼면 비율이 달라져요)."],[43,1,2,0,"30：42와 비율이 같은 비는 어느 것인가요?",["10：21","5：7","6：8","7：5"],1,null,"정답: 5：7. 비의 전항과 후항에 0이 아닌 같은 수를 곱하거나 나누어도 비율은 같아요(같은 수를 더하거나 빼면 비율이 달라져요)."],[44,1,2,0,"비 3：7을 보고 바르게 말한 친구는 누구인가요?",["리엘: 전항에만 4를 곱한 12：7은 비율이 3：7과 같아.","정후: 7：3은 3：7과 비율이 같아.","민지: 전항과 후항에 4를 곱한 12：28은 비율이 3：7과 같아.","다운: 전항과 후항에 4를 더한 7：11은 비율이 3：7과 같아."],2,null,"정답: 민지: 전항과 후항에 4를 곱한 12：28은 비율이 3：7과 같아. 비의 전항과 후항에 0이 아닌 같은 수를 곱하거나 나누어도 비율은 같아요(같은 수를 더하거나 빼면 비율이 달라져요)."],[45,1,2,0,"비 9：12의 비율을 기약분수로 나타내면 얼마인가요?",["4/3","3/4","3/7","9/21"],1,null,"정답: 3/4. 비의 전항과 후항에 0이 아닌 같은 수를 곱하거나 나누어도 비율은 같아요(같은 수를 더하거나 빼면 비율이 달라져요)."],[46,2,1,0,"84：36을 가장 간단한 자연수의 비로 나타내면?",["7：3","8：3","3：7","42：18"],0,null,"84：36의 전항과 후항에 ÷12 → 7：3. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[47,2,2,0,"24：56을 가장 간단한 자연수의 비로 나타내려면 전항과 후항을 몇으로 나누면 되나요?",["8","4","2","7"],0,null,"소수의 비는 10, 100을, 분수의 비는 분모의 최소공배수를 곱하면 자연수의 비가 돼요. 자연수의 비는 두 수의 최대공약수로 나누면 가장 간단해져요. (정답: 8)"],[48,2,3,0,"1.2：4/5를 가장 간단한 자연수의 비로 나타내면?",["3：2","3：1","5：2","2：3"],0,null,"1.2：4/5의 전항과 후항에 ×5 → 6：4, ÷2 → 3：2. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[49,2,1,0,"45：60을 가장 간단한 자연수의 비로 나타내면?",["15：20","4：3","3：5","3：4"],3,null,"45：60의 전항과 후항에 ÷15 → 3：4. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[50,2,2,0,"2/3：1/9을 가장 간단한 자연수의 비로 나타내면?",["1：3","2：1","6：1","1：6"],2,null,"2/3：1/9의 전항과 후항에 ×9 → 6：1. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[51,2,3,0,"2/3：0.5를 가장 간단한 자연수의 비로 나타내면?",["5：3","3：4","4：3","5：4"],2,null,"2/3：0.5의 전항과 후항에 ×6 → 4：3. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[52,2,1,0,"64：96을 가장 간단한 자연수의 비로 나타내면?",["1：3","32：48","3：2","2：3"],3,null,"64：96의 전항과 후항에 ÷32 → 2：3. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[53,2,2,0,"1/6：1/4을 간단한 자연수의 비로 나타내려면 전항과 후항에 가장 작은 자연수 몇을 곱하면 되나요?",["10","12","24","4"],1,null,"소수의 비는 10, 100을, 분수의 비는 분모의 최소공배수를 곱하면 자연수의 비가 돼요. 자연수의 비는 두 수의 최대공약수로 나누면 가장 간단해져요. (정답: 12)"],[54,2,3,0,"0.7：9를 가장 간단한 자연수의 비로 나타내면?",["90：7","7：90","7：9","7：89"],1,null,"0.7：9의 전항과 후항에 ×10 → 7：90. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[55,2,1,0,"10：18을 가장 간단한 자연수의 비로 나타내면?",["5：9","4：9","9：5","5：8"],0,null,"10：18의 전항과 후항에 ÷2 → 5：9. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[56,2,2,0,"5/12：1/8을 가장 간단한 자연수의 비로 나타내면?",["3：2","10：3","5：1","3：10"],1,null,"5/12：1/8의 전항과 후항에 ×24 → 10：3. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[57,2,3,0,"1/5：0.5를 가장 간단한 자연수의 비로 나타내면?",["2：5","5：2","4：5","3：5"],0,null,"1/5：0.5의 전항과 후항에 ×10 → 2：5. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[58,2,1,0,"150：90을 가장 간단한 자연수의 비로 나타내면?",["75：45","3：5","5：3","5：4"],2,null,"150：90의 전항과 후항에 ÷30 → 5：3. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[59,2,2,0,"1.2：1.8을 가장 간단한 자연수의 비로 나타내면?",["4：3","3：2","12：18","2：3"],3,null,"1.2：1.8의 전항과 후항에 ×10 → 12：18, ÷6 → 2：3. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[60,2,3,0,"12：1.6을 가장 간단한 자연수의 비로 나타내면?",["15：2","3：4","120：16","2：15"],0,null,"12：1.6의 전항과 후항에 ×10 → 120：16, ÷8 → 15：2. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[61,2,1,0,"140：35를 가장 간단한 자연수의 비로 나타내면?",["1：4","5：1","4：1","28：7"],2,null,"140：35의 전항과 후항에 ÷35 → 4：1. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[62,2,2,0,"2.4：3.2를 가장 간단한 자연수의 비로 나타내면?",["3：4","4：3","3：5","24：32"],0,null,"2.4：3.2의 전항과 후항에 ×10 → 24：32, ÷8 → 3：4. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[63,2,3,0,"0.25：1/3을 가장 간단한 자연수의 비로 나타내면?",["4：3","6：5","3：5","3：4"],3,null,"0.25：1/3의 전항과 후항에 ×12 → 3：4. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[64,2,1,0,"24：56을 가장 간단한 자연수의 비로 나타내면?",["7：3","4：7","3：7","12：28"],2,null,"24：56의 전항과 후항에 ÷8 → 3：7. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[65,2,2,0,"1/6：4/15를 가장 간단한 자연수의 비로 나타내면?",["2：5","1：4","8：5","5：8"],3,null,"1/6：4/15의 전항과 후항에 ×30 → 5：8. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[66,2,3,0,"0.7：2/5를 가장 간단한 자연수의 비로 나타내면?",["14：5","7：5","4：7","7：4"],3,null,"0.7：2/5의 전항과 후항에 ×10 → 7：4. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[67,2,1,0,"72：27을 가장 간단한 자연수의 비로 나타내면?",["24：9","3：8","8：3","7：3"],2,null,"72：27의 전항과 후항에 ÷9 → 8：3. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[68,2,2,0,"6.3：2.7을 가장 간단한 자연수의 비로 나타내면?",["3：7","63：27","8：3","7：3"],3,null,"6.3：2.7의 전항과 후항에 ×10 → 63：27, ÷9 → 7：3. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[69,2,3,0,"0.4：1/2을 가장 간단한 자연수의 비로 나타내면?",["5：4","4：5","6：5","3：5"],1,null,"0.4：1/2의 전항과 후항에 ×10 → 4：5. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[70,2,1,0,"28：63을 가장 간단한 자연수의 비로 나타내면?",["5：9","4：9","9：4","4：11"],1,null,"28：63의 전항과 후항에 ÷7 → 4：9. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[71,2,2,0,"1/3：5/6를 가장 간단한 자연수의 비로 나타내면?",["1：2","5：2","2：5","1：5"],2,null,"1/3：5/6의 전항과 후항에 ×6 → 2：5. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[72,2,3,0,"4：0.6을 가장 간단한 자연수의 비로 나타내면?",["2：3","40：6","3：20","20：3"],3,null,"4：0.6의 전항과 후항에 ×10 → 40：6, ÷2 → 20：3. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[73,2,1,0,"36：48을 가장 간단한 자연수의 비로 나타내면?",["3：5","4：3","18：24","3：4"],3,null,"36：48의 전항과 후항에 ÷12 → 3：4. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[74,2,2,0,"0.7：2.1을 가장 간단한 자연수의 비로 나타내면?",["7：21","3：1","2：3","1：3"],3,null,"0.7：2.1의 전항과 후항에 ×10 → 7：21, ÷7 → 1：3. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[75,2,3,0,"0.6：3/4을 가장 간단한 자연수의 비로 나타내면?",["3：5","4：5","6：5","5：4"],1,null,"0.6：3/4의 전항과 후항에 ×20 → 12：15, ÷3 → 4：5. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[76,2,2,0,"2/7：3/14을 가장 간단한 자연수의 비로 나타내면?",["2：3","1：2","4：3","3：4"],2,null,"2/7：3/14의 전항과 후항에 ×14 → 4：3. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[77,2,3,0,"1.5：3/4을 가장 간단한 자연수의 비로 나타내면?",["1：2","2：1","3：1","4：1"],1,null,"1.5：3/4의 전항과 후항에 ×4 → 6：3, ÷3 → 2：1. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[78,2,2,0,"3/5：1/2을 가장 간단한 자연수의 비로 나타내면?",["5：2","3：1","5：6","6：5"],3,null,"3/5：1/2의 전항과 후항에 ×10 → 6：5. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[79,2,3,0,"1/4：0.3을 가장 간단한 자연수의 비로 나타내면?",["6：5","10：7","5：7","5：6"],3,null,"1/4：0.3의 전항과 후항에 ×20 → 5：6. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[80,2,2,0,"1/2：2/5를 가장 간단한 자연수의 비로 나타내면?",["1：2","5：4","2：5","4：5"],1,null,"1/2：2/5의 전항과 후항에 ×10 → 5：4. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[81,2,3,0,"1.5：6을 가장 간단한 자연수의 비로 나타내면?",["4：1","5：2","15：60","1：4"],3,null,"1.5：6의 전항과 후항에 ×10 → 15：60, ÷15 → 1：4. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[82,2,2,0,"0.15：0.35를 가장 간단한 자연수의 비로 나타내면?",["3：7","15：35","4：7","7：3"],0,null,"0.15：0.35의 전항과 후항에 ×100 → 15：35, ÷5 → 3：7. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[83,2,3,0,"0.9：3/10을 가장 간단한 자연수의 비로 나타내면?",["3：1","1：3","3：2","4：1"],0,null,"0.9：3/10의 전항과 후항에 ×10 → 9：3, ÷3 → 3：1. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[84,2,2,0,"0.12：0.18을 가장 간단한 자연수의 비로 나타내면?",["12：18","2：3","4：3","3：2"],1,null,"0.12：0.18의 전항과 후항에 ×100 → 12：18, ÷6 → 2：3. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[85,2,3,0,"7：3.5를 가장 간단한 자연수의 비로 나타내면?",["1：5","2：1","70：35","1：2"],1,null,"7：3.5의 전항과 후항에 ×10 → 70：35, ÷35 → 2：1. 더 나눌 수 없으면 가장 간단한 자연수의 비예요."],[86,3,1,0,"비례식 7：5=49：35에서 내항을 모두 고르면?",["5, 35","5, 49","7, 49","7, 35"],1,null,"바깥쪽에 있는 7과 35가 외항, 안쪽에 있는 5와 49가 내항이에요."],[87,3,2,0,"비례식의 성질을 이용하여 비례식인 것을 찾아보세요.",["3：2=9：6","4：1=2：8","4：3=9：12","8：7=7：8"],0,null,"3：2=9：6: 외항의 곱 3×6=18, 내항의 곱 2×9=18로 같아요. 나머지는 두 곱이 달라요."],[88,3,1,0,"비례식 16：14=8：7에서 내항을 모두 고르면?",["14, 8","16, 7","16, 8","14, 7"],0,null,"바깥쪽에 있는 16과 7이 외항, 안쪽에 있는 14와 8이 내항이에요."],[89,3,2,0,"비례식의 성질을 이용하여 비례식이 아닌 것을 찾아보세요.",["8：12=10：15","7：4=42：25","45：5=54：6","1：3=2：6"],1,null,"7：4=42：25: 외항의 곱 7×25=175, 내항의 곱 4×42=168로 달라서 비례식이 아니에요."],[90,3,1,0,"비례식 28：4=42：6에서 외항을 모두 고르면?",["4, 42","28, 42","28, 6","4, 6"],2,null,"바깥쪽에 있는 28과 6이 외항, 안쪽에 있는 4와 42가 내항이에요."],[91,3,2,0,"비례식의 성질을 이용하여 비례식이 아닌 것을 찾아보세요.",["45：5=27：3","7：28=1：4","7：5=48：40","16：56=4：14"],2,null,"7：5=48：40: 외항의 곱 7×40=280, 내항의 곱 5×48=240로 달라서 비례식이 아니에요."],[92,3,1,0,"비례식 56：16=21：6에서 외항을 모두 고르면?",["16, 6","16, 21","56, 21","56, 6"],3,null,"바깥쪽에 있는 56과 6이 외항, 안쪽에 있는 16과 21이 내항이에요."],[93,3,2,0,"비례식의 성질을 이용하여 비례식인 것을 찾아보세요.",["8：7=24：21","6：1=18：13","1：3=7：22","16：18=8：10"],0,null,"8：7=24：21: 외항의 곱 8×21=168, 내항의 곱 7×24=168로 같아요. 나머지는 두 곱이 달라요."],[94,3,1,0,"비례식 21：3=28：4에서 내항을 모두 고르면?",["21, 4","3, 4","21, 28","3, 28"],3,null,"바깥쪽에 있는 21과 4가 외항, 안쪽에 있는 3과 28이 내항이에요."],[95,3,2,0,"비례식의 성질을 이용하여 비례식인 것을 찾아보세요.",["5：5=32：40","20：5=8：2","7：49=5：28","15：5=12：5"],1,null,"20：5=8：2: 외항의 곱 20×2=40, 내항의 곱 5×8=40로 같아요. 나머지는 두 곱이 달라요."],[96,3,1,0,"비례식 16：56=6：21에서 외항을 모두 고르면?",["56, 6","16, 6","56, 21","16, 21"],3,null,"바깥쪽에 있는 16과 21이 외항, 안쪽에 있는 56과 6이 내항이에요."],[97,3,2,0,"비례식의 성질을 이용하여 비례식이 아닌 것을 찾아보세요.",["24：16=6：4","21：35=7：10","4：32=8：64","6：54=2：18"],1,null,"21：35=7：10: 외항의 곱 21×10=210, 내항의 곱 35×7=245로 달라서 비례식이 아니에요."],[98,3,1,0,"비례식 12：15=24：30에서 내항을 모두 고르면?",["15, 24","12, 24","15, 30","12, 30"],0,null,"바깥쪽에 있는 12와 30이 외항, 안쪽에 있는 15와 24가 내항이에요."],[99,3,2,0,"비례식의 성질을 이용하여 비례식이 아닌 것을 찾아보세요.",["9：3=12：6","6：2=12：4","5：20=7：28","28：63=4：9"],0,null,"9：3=12：6: 외항의 곱 9×6=54, 내항의 곱 3×12=36로 달라서 비례식이 아니에요."],[100,3,1,0,"비례식 15：5=9：3에서 내항을 모두 고르면?",["5, 3","15, 3","5, 9","15, 9"],2,null,"바깥쪽에 있는 15와 3이 외항, 안쪽에 있는 5와 9가 내항이에요."],[101,3,2,0,"비례식의 성질을 이용하여 비례식인 것을 찾아보세요.",["8：36=36：8","20：35=4：7","9：3=16：5","10：6=12：20"],1,null,"20：35=4：7: 외항의 곱 20×7=140, 내항의 곱 35×4=140로 같아요. 나머지는 두 곱이 달라요."],[102,3,1,0,"비례식 6：21=8：28에서 외항을 모두 고르면?",["21, 28","6, 8","21, 8","6, 28"],3,null,"바깥쪽에 있는 6과 28이 외항, 안쪽에 있는 21과 8이 내항이에요."],[103,3,2,0,"비례식의 성질을 이용하여 비례식인 것을 찾아보세요.",["7：9=15：18","73：8=18：2","6：5=30：25","31：36=5：6"],2,null,"6：5=30：25: 외항의 곱 6×25=150, 내항의 곱 5×30=150로 같아요. 나머지는 두 곱이 달라요."],[104,3,1,0,"비례식 14：2=28：4에서 외항을 모두 고르면?",["14, 4","2, 28","2, 4","14, 28"],0,null,"바깥쪽에 있는 14와 4가 외항, 안쪽에 있는 2와 28이 내항이에요."],[105,3,2,0,"비례식의 성질을 이용하여 비례식인 것을 찾아보세요.",["16：8=8：16","6：8=9：12","14：18=7：11","32：20=8：6"],1,null,"6：8=9：12: 외항의 곱 6×12=72, 내항의 곱 8×9=72로 같아요. 나머지는 두 곱이 달라요."],[106,3,1,0,"비례식 36：32=9：8에서 내항을 모두 고르면?",["36, 8","36, 9","32, 9","32, 8"],2,null,"바깥쪽에 있는 36과 8이 외항, 안쪽에 있는 32와 9가 내항이에요."],[107,3,2,0,"비례식의 성질을 이용하여 비례식인 것을 찾아보세요.",["4：3=33：24","5：2=35：14","9：8=28：24","6：5=5：6"],1,null,"5：2=35：14: 외항의 곱 5×14=70, 내항의 곱 2×35=70로 같아요. 나머지는 두 곱이 달라요."],[108,3,1,0,"비례식 4：14=8：28에서 외항을 모두 고르면?",["4, 28","14, 28","14, 8","4, 8"],0,null,"바깥쪽에 있는 4와 28이 외항, 안쪽에 있는 14와 8이 내항이에요."],[109,3,2,0,"비례식의 성질을 이용하여 비례식이 아닌 것을 찾아보세요.",["18：2=36：4","7：28=8：32","7：5=56：40","9：4=10：5"],3,null,"9：4=10：5: 외항의 곱 9×5=45, 내항의 곱 4×10=40로 달라서 비례식이 아니에요."],[110,4,1,0,"비례식 32：4=56：7에서 내항의 곱은 얼마일까요?",["60","128","392","224"],3,null,"내항은 4와 56이에요. 내항의 곱 = 4×56 = 224 (외항의 곱 32×7 = 224와 같아요)"],[111,4,2,0,"□ 안에 알맞은 수가 가장 큰 것은 어느 것일까요?",["5：9=□：27","□：12=1：3","49：□=28：4","3：2=□：14"],3,null,"외항의 곱 = 내항의 곱으로 □를 구하면 3：2=□：14 → □=21, □：12=1：3 → □=4, 49：□=28：4 → □=7, 5：9=□：27 → □=15. 가장 큰 수는 21이에요."],[112,4,3,0,"48：6=16：□는 비례식입니다. 바르게 설명한 것을 고르세요.",["외항은 6과 16입니다.","□ 안에 알맞은 수는 2입니다.","48：6과 16：□의 비율은 서로 다릅니다.","외항의 곱 48×□와 내항의 곱 6×16은 다릅니다."],1,null,"외항의 곱 48×□ = 내항의 곱 6×16 = 96, □ = 96÷48 = 2. 비례식은 비율이 같은 두 비를 =로 나타낸 식이에요. 외항은 48과 □예요."],[113,4,1,0,"비례식 3：2=18：12에서 내항의 곱은 얼마일까요?",["6","216","36","20"],2,null,"내항은 2와 18이에요. 내항의 곱 = 2×18 = 36 (외항의 곱 3×12 = 36과 같아요)"],[114,4,2,0,"비례식의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. □：16=5：2",["5","16","40","80"],2,null,"외항의 곱과 내항의 곱은 같아요. □×2 = 16×5 = 80, □ = 80÷2 = 40"],[115,4,3,0,"비례식의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. 5：□=20：1",["1","100","16","1/4"],3,null,"외항의 곱과 내항의 곱은 같아요. □×20 = 5×1 = 5, □ = 5÷20 = 1/4"],[116,4,1,0,"비례식 6：48=5：40에서 내항의 곱은 얼마일까요?",["288","240","200","53"],1,null,"내항은 48과 5예요. 내항의 곱 = 48×5 = 240 (외항의 곱 6×40 = 240과 같아요)"],[117,4,2,0,"비례식의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. 4：□=5：10",["2","10","11","8"],3,null,"외항의 곱과 내항의 곱은 같아요. □×5 = 4×10 = 40, □ = 40÷5 = 8"],[118,4,3,0,"7：49=6：□는 비례식입니다. 바르게 설명한 것을 고르세요.",["외항의 곱 7×□와 내항의 곱 49×6은 같습니다.","외항은 49와 6입니다.","외항의 곱 7×□와 내항의 곱 49×6은 다릅니다.","7：49와 6：□의 비율은 서로 다릅니다."],0,null,"외항의 곱 7×□ = 내항의 곱 49×6 = 294, □ = 294÷7 = 42. 비례식은 비율이 같은 두 비를 =로 나타낸 식이에요. 외항은 7과 □예요."],[119,4,1,0,"비례식 24：9=8：3에서 외항의 곱은 얼마일까요?",["192","216","27","72"],3,null,"외항은 24와 3이에요. 외항의 곱 = 24×3 = 72 (내항의 곱 9×8 = 72와 같아요)"],[120,4,2,0,"비례식의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. □：8=12：4",["24","48","8","12"],0,null,"외항의 곱과 내항의 곱은 같아요. □×4 = 8×12 = 96, □ = 96÷4 = 24"],[121,4,3,0,"30：42=5：□는 비례식입니다. 바르게 설명한 것을 고르세요.",["30：42와 5：□의 비율은 서로 다릅니다.","30：42와 5：□의 비율은 같습니다.","□ 안에 알맞은 수는 17입니다.","외항의 곱 30×□와 내항의 곱 42×5는 다릅니다."],1,null,"외항의 곱 30×□ = 내항의 곱 42×5 = 210, □ = 210÷30 = 7. 비례식은 비율이 같은 두 비를 =로 나타낸 식이에요. 외항은 30과 □예요."],[122,4,1,0,"비례식 56：7=8：1에서 내항의 곱은 얼마일까요?",["392","56","8","15"],1,null,"내항은 7과 8이에요. 내항의 곱 = 7×8 = 56 (외항의 곱 56×1 = 56과 같아요)"],[123,4,2,0,"비례식의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. 7：3=□：6",["4","6","14","7"],2,null,"외항의 곱과 내항의 곱은 같아요. 3×□ = 7×6 = 42, □ = 42÷3 = 14"],[124,4,3,0,"20：8=35：23이 비례식이 아닌 이유로 알맞은 것은?",["전항 20과 35가 다르기 때문입니다.","후항 8과 23이 다르기 때문입니다.","외항의 곱 460과 내항의 곱 280이 같기 때문입니다.","외항의 곱 460과 내항의 곱 280이 다르기 때문입니다."],3,null,"외항의 곱 20×23=460, 내항의 곱 8×35=280. 비례식이면 두 곱이 같아야 하는데 달라요."],[125,4,1,0,"비례식 21：12=7：4에서 외항의 곱은 얼마일까요?",["147","84","25","48"],1,null,"외항은 21과 4예요. 외항의 곱 = 21×4 = 84 (내항의 곱 12×7 = 84와 같아요)"],[126,4,2,0,"비례식의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. 9：12=12：□",["12","9","16","32"],2,null,"외항의 곱과 내항의 곱은 같아요. 9×□ = 12×12 = 144, □ = 144÷9 = 16"],[127,4,3,0,"비례식 □：14=18：42에서 내항의 곱이 252입니다. □ 안에 알맞은 수는?",["18","6","12","14"],1,null,"외항의 곱 = 내항의 곱이므로 □×42 = 252, □ = 252÷42 = 6"],[128,4,1,0,"비례식 14：35=4：10에서 외항의 곱은 얼마일까요?",["140","350","56","24"],0,null,"외항은 14와 10이에요. 외항의 곱 = 14×10 = 140 (내항의 곱 35×4 = 140과 같아요)"],[129,4,2,0,"비례식의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. 7：9=□：18",["28","7","14","18"],2,null,"외항의 곱과 내항의 곱은 같아요. 9×□ = 7×18 = 126, □ = 126÷9 = 14"],[130,4,3,0,"비례식의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. 2/3：4=1：□",["1","11/3","6","8/3"],2,null,"외항의 곱과 내항의 곱은 같아요. 2/3×□ = 4×1 = 4, □ = 4÷2/3 = 6"],[131,4,1,0,"비례식 54：12=27：6에서 내항의 곱은 얼마일까요?",["324","162","39","648"],0,null,"내항은 12와 27이에요. 내항의 곱 = 12×27 = 324 (외항의 곱 54×6 = 324와 같아요)"],[132,4,2,0,"비례식의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. 10：8=30：□",["24","8","48","30"],0,null,"외항의 곱과 내항의 곱은 같아요. 10×□ = 8×30 = 240, □ = 240÷10 = 24"],[133,4,3,0,"비례식의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. 3/4：6=□：8",["3/4","9/16","8","1"],3,null,"외항의 곱과 내항의 곱은 같아요. 6×□ = 3/4×8 = 6, □ = 6÷6 = 1"],[134,4,1,0,"비례식 20：8=15：6에서 외항의 곱은 얼마일까요?",["120","26","48","300"],0,null,"외항은 20과 6이에요. 외항의 곱 = 20×6 = 120 (내항의 곱 8×15 = 120과 같아요)"],[135,4,2,0,"비례식의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. 24：3=□：2",["2","25","36","16"],3,null,"외항의 곱과 내항의 곱은 같아요. 3×□ = 24×2 = 48, □ = 48÷3 = 16"],[136,4,3,0,"비례식의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. 0.4：3=□：15",["15","0.08","0.4","2"],3,null,"외항의 곱과 내항의 곱은 같아요. 3×□ = 0.4×15 = 6, □ = 6÷3 = 2"],[137,4,1,0,"비례식 21：14=15：10에서 외항의 곱은 얼마일까요?",["315","31","140","210"],3,null,"외항은 21과 10이에요. 외항의 곱 = 21×10 = 210 (내항의 곱 14×15 = 210과 같아요)"],[138,4,2,0,"비례식의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. 5：□=6：48",["5","49","48","40"],3,null,"외항의 곱과 내항의 곱은 같아요. □×6 = 5×48 = 240, □ = 240÷6 = 40"],[139,4,3,0,"12：21=8：17이 비례식이 아닌 이유로 알맞은 것은?",["외항의 곱 204와 내항의 곱 168이 다르기 때문입니다.","후항 21과 17이 다르기 때문입니다.","외항의 곱 204와 내항의 곱 168이 같기 때문입니다.","전항 12와 8이 다르기 때문입니다."],0,null,"외항의 곱 12×17=204, 내항의 곱 21×8=168. 비례식이면 두 곱이 같아야 하는데 달라요."],[140,4,1,0,"비례식 7：42=1：6에서 외항의 곱은 얼마일까요?",["252","42","13","7"],1,null,"외항은 7과 6이에요. 외항의 곱 = 7×6 = 42 (내항의 곱 42×1 = 42와 같아요)"],[141,4,2,0,"비례식의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. □：15=4：5",["4","12","15","24"],1,null,"외항의 곱과 내항의 곱은 같아요. □×5 = 15×4 = 60, □ = 60÷5 = 12"],[142,4,3,0,"8：6=24：□는 비례식입니다. 바르게 설명한 것을 고르세요.",["외항은 6과 24입니다.","8：6과 24：□의 비율은 같습니다.","외항의 곱 8×□와 내항의 곱 6×24는 다릅니다.","8：6과 24：□의 비율은 서로 다릅니다."],1,null,"외항의 곱 8×□ = 내항의 곱 6×24 = 144, □ = 144÷8 = 18. 비례식은 비율이 같은 두 비를 =로 나타낸 식이에요. 외항은 8과 □예요."],[143,4,1,0,"비례식 3：15=8：40에서 외항의 곱은 얼마일까요?",["24","43","120","600"],2,null,"외항은 3과 40이에요. 외항의 곱 = 3×40 = 120 (내항의 곱 15×8 = 120과 같아요)"],[144,4,2,0,"비례식의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. □：14=4：28",["2","98","18","4"],0,null,"외항의 곱과 내항의 곱은 같아요. □×28 = 14×4 = 56, □ = 56÷28 = 2"],[145,4,3,0,"9：6=16：24가 비례식이 아닌 이유로 알맞은 것은?",["외항의 곱 216과 내항의 곱 96이 다르기 때문입니다.","외항의 합 33과 내항의 합 22가 다르기 때문입니다.","전항 9와 16이 다르기 때문입니다.","외항의 곱 216과 내항의 곱 96이 같기 때문입니다."],0,null,"외항의 곱 9×24=216, 내항의 곱 6×16=96. 비례식이면 두 곱이 같아야 하는데 달라요."],[146,4,1,0,"비례식 8：6=28：21에서 내항의 곱은 얼마일까요?",["34","588","48","168"],3,null,"내항은 6과 28이에요. 내항의 곱 = 6×28 = 168 (외항의 곱 8×21 = 168과 같아요)"],[147,4,2,0,"비례식의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. 5：40=2：□",["100","2","43","16"],3,null,"외항의 곱과 내항의 곱은 같아요. 5×□ = 40×2 = 80, □ = 80÷5 = 16"],[148,4,3,0,"비례식 □：12=15：6에서 내항의 곱이 180입니다. □ 안에 알맞은 수는?",["30","15","60","12"],0,null,"외항의 곱 = 내항의 곱이므로 □×6 = 180, □ = 180÷6 = 30"],[149,4,1,0,"비례식 48：8=36：6에서 내항의 곱은 얼마일까요?",["288","216","44","384"],0,null,"내항은 8과 36이에요. 내항의 곱 = 8×36 = 288 (외항의 곱 48×6 = 288과 같아요)"],[150,4,2,0,"비례식의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. 6：15=10：□",["11","9","10","25"],3,null,"외항의 곱과 내항의 곱은 같아요. 6×□ = 15×10 = 150, □ = 150÷6 = 25"],[151,4,3,0,"35：5=21：4가 비례식이 아닌 이유로 알맞은 것은?",["전항 35와 21이 다르기 때문입니다.","외항의 곱 140과 내항의 곱 105가 같기 때문입니다.","외항의 곱 140과 내항의 곱 105가 다르기 때문입니다.","외항의 합 39와 내항의 합 26이 다르기 때문입니다."],2,null,"외항의 곱 35×4=140, 내항의 곱 5×21=105. 비례식이면 두 곱이 같아야 하는데 달라요."],[152,4,1,0,"비례식 4：6=14：21에서 내항의 곱은 얼마일까요?",["84","294","20","24"],0,null,"내항은 6과 14예요. 내항의 곱 = 6×14 = 84 (외항의 곱 4×21 = 84와 같아요)"],[153,4,2,0,"비례식의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. 8：2=4：□",["1","2","4","6"],0,null,"외항의 곱과 내항의 곱은 같아요. 8×□ = 2×4 = 8, □ = 8÷8 = 1"],[154,4,3,0,"비례식 12：□=2：5에서 외항의 곱이 60입니다. □ 안에 알맞은 수는?",["30","12","5","60"],0,null,"외항의 곱 = 내항의 곱이므로 □×2 = 60, □ = 60÷2 = 30"],[155,4,1,0,"비례식 12：4=9：3에서 외항의 곱은 얼마일까요?",["12","108","36","15"],2,null,"외항은 12와 3이에요. 외항의 곱 = 12×3 = 36 (내항의 곱 4×9 = 36과 같아요)"],[156,4,2,0,"비례식의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. 8：64=4：□",["4","68","32","128"],2,null,"외항의 곱과 내항의 곱은 같아요. 8×□ = 64×4 = 256, □ = 256÷8 = 32"],[157,4,3,0,"비례식 12：□=4：3에서 외항의 곱이 36입니다. □ 안에 알맞은 수는?",["3","12","9","18"],2,null,"외항의 곱 = 내항의 곱이므로 □×4 = 36, □ = 36÷4 = 9"],[158,4,1,0,"비례식 12：16=15：20에서 내항의 곱은 얼마일까요?",["31","300","240","192"],2,null,"내항은 16과 15예요. 내항의 곱 = 16×15 = 240 (외항의 곱 12×20 = 240과 같아요)"],[159,4,2,0,"비례식의 성질을 이용하여 □ 안에 알맞은 수를 구하세요. □：16=6：12",["6","2","8","32"],2,null,"외항의 곱과 내항의 곱은 같아요. □×12 = 16×6 = 96, □ = 96÷12 = 8"],[160,5,1,1,"수도꼭지에서 6분 동안 물이 36 L 나와요. 물 216 L를 받으려면 몇 분 걸릴까요?",null,null,"36","6：36=★：216 → 뒤의 양이 6배이므로 ★도 6배: 36"],[161,5,2,1,"쿠키 반죽에 밀가루 240 g과 설탕 96 g을 넣어요. 같은 비율로 밀가루 360 g을 넣으면 설탕은 몇 g 넣어야 할까요?",null,null,"144","240：96=360：★ → 외항의 곱=내항의 곱이므로 ★=96×360÷240=144"],[162,5,3,1,"사진 속 누나의 키는 1.5 cm이고 시계탑의 높이는 12 cm예요. 누나의 실제 키가 1.6 m일 때 시계탑의 실제 높이는 몇 m일까요?",null,null,"12.8","1.5：12를 간단한 자연수의 비로 나타내면 1：8 → 1：8=1.6：★, ★=1.6×8=12.8 (m)"],[163,5,1,1,"어느 공장에서 30분 동안 컴퓨터 60대를 조립해요. 180분 동안에는 몇 대를 조립할까요?",null,null,"360","30：60=180：★ → 앞의 양이 6배이므로 ★도 6배: 360"],[164,5,2,1,"민서는 6분 동안 420 m를 걸어요. 같은 빠르기로 21분 동안 몇 m를 걸을까요?",null,null,"1470","6：420=21：★ → 외항의 곱=내항의 곱이므로 ★=420×21÷6=1470"],[165,5,3,1,"빨간색 찰흙과 노란색 찰흙의 양을 4：3으로 섞어서 주황색 찰흙을 만들어요. 빨간색 찰흙 160 g을 쓰면 노란색 찰흙은 몇 g 필요할까요?",null,null,"120","4：3=160：★ → 외항의 곱=내항의 곱 → ★=120"],[166,5,1,1,"페인트 5 L로 담장 75 m²를 칠할 수 있어요. 담장 225 m²를 칠하려면 페인트가 몇 L 필요할까요?",null,null,"15","5：75=★：225 → 뒤의 양이 3배이므로 ★도 3배: 15"],[167,5,2,1,"6 kWh의 전기 에너지로 40 km를 가는 전기차가 있어요. 21 kWh로는 몇 km를 갈 수 있을까요?",null,null,"140","6：40=21：★ → 6×★=40×21 → ★=140 (km)"],[168,5,3,1,"물과 원액의 양을 4：3으로 섞어서 주스를 만들어요. 원액 36 mL를 쓰면 물은 몇 mL 필요할까요?",null,null,"48","4：3=★：36 → 외항의 곱=내항의 곱 → ★=48"],[169,5,1,1,"지도에서 3 cm는 실제 거리 30 km예요. 지도에서 6 cm인 거리는 실제로 몇 km일까요?",null,null,"60","3：30=6：★ → 앞의 양이 2배이므로 ★도 2배: 60"],[170,5,2,1,"민서는 6분 동안 480 m를 걸어요. 같은 빠르기로 1120 m를 걷는 데 몇 분 걸릴까요?",null,null,"14","6：480=★：1120 → 외항의 곱=내항의 곱이므로 ★=6×1120÷480=14"],[171,5,3,1,"4.5 kWh의 전기 에너지로 18 km를 가는 전기차가 있어요. 63 km를 가려면 전기 에너지가 몇 kWh 필요할까요?",null,null,"15.75","4.5：18=★：63 → 18×★=4.5×63 → ★=15.75"],[172,5,1,1,"직거래 장터에서 쌀 2 kg을 8000원에 팔아요. 40000원으로 쌀 몇 kg을 살 수 있을까요?",null,null,"10","2：8000=★：40000 → 8000×★=2×40000 → ★=10 (kg)"],[173,5,2,1,"페인트 2 L로 담장 16 m²를 칠할 수 있어요. 담장 56 m²를 칠하려면 페인트가 몇 L 필요할까요?",null,null,"7","2：16=★：56 → 외항의 곱=내항의 곱이므로 ★=2×56÷16=7"],[174,5,3,1,"휘발유 2.4 L로 19.2 km를 가는 자동차가 있어요. 휘발유 8.4 L로는 몇 km를 갈까요?",null,null,"67.2","2.4：19.2=8.4：★ → 2.4×★=19.2×8.4 → ★=67.2"],[175,5,1,1,"환전소에서 우리나라 돈 19000원을 중국 돈 100위안으로 바꿀 수 있어요. 38000원은 몇 위안으로 바꿀 수 있을까요?",null,null,"200","19000：100=38000：★ → 앞의 양이 2배이므로 ★도 2배: 200"],[176,5,2,1,"3 kWh의 전기 에너지로 15 km를 가는 전기차가 있어요. 27 km를 가려면 전기 에너지가 몇 kWh 필요할까요?",null,null,"5.4","3：15=★：27 → 외항의 곱=내항의 곱이므로 ★=3×27÷15=5.4"],[177,5,3,1,"연필 4자루가 1600원이에요. 6000원을 내고 같은 연필 14자루를 사면 거스름돈은 얼마일까요?",null,null,"400","먼저 4：1600=14：★ → ★=5600, 그다음 문제에서 묻는 양을 계산하면 400원"],[178,5,1,1,"휘발유 8 L로 80 km를 가는 자동차가 있어요. 휘발유 40 L로는 몇 km를 갈까요?",null,null,"400","8：80=40：★ → 앞의 양이 5배이므로 ★도 5배: 400"],[179,5,2,1,"휘발유 5 L로 75 km를 가는 자동차가 있어요. 휘발유 7 L로는 몇 km를 갈까요?",null,null,"105","5：75=7：★ → 외항의 곱=내항의 곱이므로 ★=75×7÷5=105"],[180,5,3,1,"휘발유 3.5 L로 28 km를 가는 자동차가 있어요. 70 km를 가려면 휘발유가 몇 L 필요할까요?",null,null,"8.75","3.5：28=★：70 → 28×★=3.5×70 → ★=8.75"],[181,5,1,1,"지도에서 1 cm는 실제 거리 2 km예요. 실제 거리 6 km는 지도에서 몇 cm일까요?",null,null,"3","1：2=★：6 → 뒤의 양이 3배이므로 ★도 3배: 3"],[182,5,2,1,"민서는 6분 동안 450 m를 걸어요. 같은 빠르기로 750 m를 걷는 데 몇 분 걸릴까요?",null,null,"10","6：450=★：750 → 외항의 곱=내항의 곱이므로 ★=6×750÷450=10"],[183,5,3,1,"물과 원액의 양을 7：2로 섞어서 주스를 만들어요. 물 420 mL를 쓰면 원액은 몇 mL 필요할까요?",null,null,"120","7：2=420：★ → 외항의 곱=내항의 곱 → ★=120"],[184,5,1,1,"민서는 3분 동안 225 m를 걸어요. 같은 빠르기로 450 m를 걷는 데 몇 분 걸릴까요?",null,null,"6","3：225=★：450 → 뒤의 양이 2배이므로 ★도 2배: 6"],[185,5,2,1,"어느 공장에서 15분 동안 컴퓨터 9대를 조립해요. 컴퓨터 15대를 조립하는 데 몇 분 걸릴까요?",null,null,"25","15：9=★：15 → 외항의 곱=내항의 곱이므로 ★=15×15÷9=25"],[186,5,3,1,"사진 속 형의 키는 3.5 cm이고 첨성대의 높이는 17.5 cm예요. 형의 실제 키가 1.4 m일 때 첨성대의 실제 높이는 몇 m일까요?",null,null,"7","3.5：17.5를 간단한 자연수의 비로 나타내면 1：5 → 1：5=1.4：★, ★=1.4×5=7 (m)"],[187,5,1,1,"프린터가 3분 동안 90장을 인쇄해요. 450장을 인쇄하려면 몇 분 걸릴까요?",null,null,"15","3：90=★：450 → 뒤의 양이 5배이므로 ★도 5배: 15"],[188,5,2,1,"연필 3자루가 1800원이에요. 같은 연필 4자루는 얼마일까요?",null,null,"2400","3：1800=4：★ → 외항의 곱=내항의 곱이므로 ★=1800×4÷3=2400"],[189,5,3,1,"수도꼭지에서 2.4분 동안 물이 19.2 L 나와요. 물 115.2 L를 받으려면 몇 분 걸릴까요?",null,null,"14.4","2.4：19.2=★：115.2 → 19.2×★=2.4×115.2 → ★=14.4"],[190,5,1,1,"환전소에서 우리나라 돈 38000원을 중국 돈 200위안으로 바꿀 수 있어요. 600위안으로 바꾸려면 우리나라 돈 몇 원이 필요할까요?",null,null,"114000","38000：200=★：600 → 뒤의 양이 3배이므로 ★도 3배: 114000"],[191,5,2,1,"페인트 4 L로 담장 48 m²를 칠할 수 있어요. 담장 60 m²를 칠하려면 페인트가 몇 L 필요할까요?",null,null,"5","4：48=★：60 → 48×★=4×60 → ★=5 (L)"],[192,5,3,1,"휘발유 5 L로 60 km를 가요. 휘발유 22.5 L로 갈 수 있는 거리는 5 L로 갈 수 있는 거리보다 몇 km 더 멀까요?",null,null,"210","먼저 5：60=22.5：★ → ★=270, 그다음 문제에서 묻는 양을 계산하면 210 km"],[193,5,1,1,"프린터가 5분 동안 120장을 인쇄해요. 240장을 인쇄하려면 몇 분 걸릴까요?",null,null,"10","5：120=★：240 → 뒤의 양이 2배이므로 ★도 2배: 10"],[194,5,2,1,"연필 6자루가 4800원이에요. 11200원으로 같은 연필을 몇 자루 살 수 있을까요?",null,null,"14","6：4800=★：11200 → 외항의 곱=내항의 곱이므로 ★=6×11200÷4800=14"],[195,5,3,1,"페인트 6 L로 담장 90 m²를 칠할 수 있어요. 담장 225 m²를 칠하려면 페인트가 6 L보다 몇 L 더 필요할까요?",null,null,"9","먼저 6：90=★：225 → ★=15 (L), 더 필요한 양은 15−6=9 (L)"],[196,5,1,1,"6 kWh의 전기 에너지로 40 km를 가는 전기차가 있어요. 24 kWh로는 몇 km를 갈 수 있을까요?",null,null,"160","6：40=24：★ → 앞의 양이 4배이므로 ★도 4배: 160"],[197,5,2,1,"지도에서 5 cm는 실제 거리 10 km예요. 실제 거리 15 km는 지도에서 몇 cm일까요?",null,null,"7.5","5：10=★：15 → 외항의 곱=내항의 곱이므로 ★=5×15÷10=7.5"],[198,5,3,1,"사진 속 삼촌의 키는 3 cm이고 첨성대의 높이는 6 cm예요. 삼촌의 실제 키가 1.6 m일 때 첨성대의 실제 높이는 몇 m일까요?",null,null,"3.2","3：6을 간단한 자연수의 비로 나타내면 1：2 → 1：2=1.6：★, ★=1.6×2=3.2 (m)"],[199,5,1,1,"환전소에서 우리나라 돈 95000원을 중국 돈 500위안으로 바꿀 수 있어요. 475000원은 몇 위안으로 바꿀 수 있을까요?",null,null,"2500","95000：500=475000：★ → 앞의 양이 5배이므로 ★도 5배: 2500"],[200,5,2,1,"쿠키 반죽에 밀가루 150 g과 설탕 100 g을 넣어요. 같은 비율로 밀가루 225 g을 넣으면 설탕은 몇 g 넣어야 할까요?",null,null,"150","150：100=225：★ → 외항의 곱=내항의 곱이므로 ★=100×225÷150=150"],[201,5,3,1,"빨간색 찰흙과 노란색 찰흙의 양을 3：2로 섞어서 주황색 찰흙을 만들어요. 노란색 찰흙 60 g을 쓰면 빨간색 찰흙은 몇 g 필요할까요?",null,null,"90","3：2=★：60 → 외항의 곱=내항의 곱 → ★=90"],[202,5,1,1,"지도에서 1 cm는 실제 거리 4 km예요. 지도에서 5 cm인 거리는 실제로 몇 km일까요?",null,null,"20","1：4=5：★ → 앞의 양이 5배이므로 ★도 5배: 20"],[203,5,2,1,"지도에서 5 cm는 실제 거리 50 km예요. 실제 거리 175 km는 지도에서 몇 cm일까요?",null,null,"17.5","5：50=★：175 → 외항의 곱=내항의 곱이므로 ★=5×175÷50=17.5"],[204,5,3,1,"사진 속 형의 키는 2.5 cm이고 첨성대의 높이는 15 cm예요. 형의 실제 키가 1.5 m일 때 첨성대의 실제 높이는 몇 m일까요?",null,null,"9","2.5：15=1：6 → 1：6=1.5：★ → ★=9 (m)"],[205,5,1,1,"페인트 4 L로 담장 36 m²를 칠할 수 있어요. 담장 144 m²를 칠하려면 페인트가 몇 L 필요할까요?",null,null,"16","4：36=★：144 → 뒤의 양이 4배이므로 ★도 4배: 16"],[206,5,2,1,"직거래 장터에서 쌀 4 kg을 18000원에 팔아요. 31500원으로 쌀 몇 kg을 살 수 있을까요?",null,null,"7","4：18000=★：31500 → 외항의 곱=내항의 곱이므로 ★=4×31500÷18000=7"],[207,5,3,1,"지도에서 4.5 cm는 실제 거리 27 km예요. 실제 거리 108 km는 지도에서 몇 cm일까요?",null,null,"18","4.5：27=★：108 → 27×★=4.5×108 → ★=18"],[208,5,1,1,"연필 5자루가 3000원이에요. 6000원으로 같은 연필을 몇 자루 살 수 있을까요?",null,null,"10","5：3000=★：6000 → 뒤의 양이 2배이므로 ★도 2배: 10"],[209,5,2,1,"프린터가 6분 동안 144장을 인쇄해요. 336장을 인쇄하려면 몇 분 걸릴까요?",null,null,"14","6：144=★：336 → 외항의 곱=내항의 곱이므로 ★=6×336÷144=14"],[210,5,3,1,"연필 2자루가 1400원이에요. 4000원을 내고 같은 연필 5자루를 사면 거스름돈은 얼마일까요?",null,null,"500","먼저 2：1400=5：★ → ★=3500, 그다음 문제에서 묻는 양을 계산하면 500원"],[211,5,1,1,"프린터가 3분 동안 54장을 인쇄해요. 9분 동안에는 몇 장을 인쇄할까요?",null,null,"162","3：54=9：★ → 앞의 양이 3배이므로 ★도 3배: 162"],[212,5,2,1,"보라색 찰흙을 만들려면 빨간색 찰흙 30 g과 파란색 찰흙 60 g이 필요해요. 파란색 찰흙 80 g으로 만든다면 빨간색 찰흙은 몇 g 필요할까요?",null,null,"40","30：60=★：80 → 외항의 곱=내항의 곱이므로 ★=30×80÷60=40"],[213,5,3,1,"사진 속 아빠의 키는 1.5 cm이고 탑의 높이는 6 cm예요. 아빠의 실제 키가 1.6 m일 때 탑의 실제 높이는 몇 m일까요?",null,null,"6.4","1.5：6을 간단한 자연수의 비로 나타내면 1：4 → 1：4=1.6：★, ★=1.6×4=6.4 (m)"],[214,5,1,1,"쿠키 반죽에 밀가루 240 g과 설탕 120 g을 넣어요. 같은 비율로 설탕 360 g을 넣으면 밀가루는 몇 g 넣어야 할까요?",null,null,"720","240：120=★：360 → 뒤의 양이 3배이므로 ★도 3배: 720"],[215,5,2,1,"쿠키 반죽에 밀가루 300 g과 설탕 200 g을 넣어요. 같은 비율로 밀가루 540 g을 넣으면 설탕은 몇 g 넣어야 할까요?",null,null,"360","300：200=540：★ → 외항의 곱=내항의 곱이므로 ★=200×540÷300=360"],[216,5,3,1,"쌀 3 kg이 7500원이에요. 20000원으로 쌀 7.5 kg을 사면 거스름돈은 얼마일까요?",null,null,"1250","먼저 3：7500=7.5：★ → ★=18750, 그다음 문제에서 묻는 양을 계산하면 1250원"],[217,5,1,1,"보라색 찰흙을 만들려면 빨간색 찰흙 15 g과 파란색 찰흙 30 g이 필요해요. 빨간색 찰흙 30 g으로 만든다면 파란색 찰흙은 몇 g 필요할까요?",null,null,"60","15：30=30：★ → 앞의 양이 2배이므로 ★도 2배: 60"],[218,5,2,1,"프린터가 6분 동안 120장을 인쇄해요. 10분 동안에는 몇 장을 인쇄할까요?",null,null,"200","6：120=10：★ → 외항의 곱=내항의 곱이므로 ★=120×10÷6=200"],[219,5,3,1,"수도꼭지에서 3분 동안 물이 24 L 나와요. 13.5분 동안 받은 물 중 24 L를 썼다면 남은 물은 몇 L일까요?",null,null,"84","먼저 3：24=13.5：★ → ★=108, 그다음 문제에서 묻는 양을 계산하면 84 L"],[220,5,2,1,"환전소에서 우리나라 돈 57000원을 중국 돈 300위안으로 바꿀 수 있어요. 38000원은 몇 위안으로 바꿀 수 있을까요?",null,null,"200","57000：300=38000：★ → 57000×★=300×38000 → ★=200 (위안)"],[221,5,3,1,"물과 매실 원액의 양을 3：2로 섞어서 매실차를 만들어요. 매실 원액 50 mL를 쓰면 물은 몇 mL 필요할까요?",null,null,"75","3：2=★：50 → 외항의 곱=내항의 곱 → ★=75"],[222,5,2,1,"페인트 5 L로 담장 45 m²를 칠할 수 있어요. 담장 63 m²를 칠하려면 페인트가 몇 L 필요할까요?",null,null,"7","5：45=★：63 → 외항의 곱=내항의 곱이므로 ★=5×63÷45=7"],[223,5,3,1,"물과 원액의 양을 5：3으로 섞어서 주스를 만들어요. 물 60 mL를 쓰면 원액은 몇 mL 필요할까요?",null,null,"36","5：3=60：★ → 외항의 곱=내항의 곱 → ★=36"],[224,5,2,1,"페인트 3 L로 담장 24 m²를 칠할 수 있어요. 담장 36 m²를 칠하려면 페인트가 몇 L 필요할까요?",null,null,"4.5","3：24=★：36 → 외항의 곱=내항의 곱이므로 ★=3×36÷24=4.5"],[225,5,3,1,"1.5 kWh의 전기 에너지로 12 km를 가는 전기차가 있어요. 4.5 kWh로는 몇 km를 갈 수 있을까요?",null,null,"36","1.5：12=4.5：★ → 1.5×★=12×4.5 → ★=36"],[226,5,2,1,"보라색 찰흙을 만들려면 빨간색 찰흙 30 g과 파란색 찰흙 20 g이 필요해요. 파란색 찰흙 28 g으로 만든다면 빨간색 찰흙은 몇 g 필요할까요?",null,null,"42","30：20=★：28 → 외항의 곱=내항의 곱이므로 ★=30×28÷20=42"],[227,5,3,1,"사진 속 아빠의 키는 2 cm이고 첨성대의 높이는 16 cm예요. 아빠의 실제 키가 1.6 m일 때 첨성대의 실제 높이는 몇 m일까요?",null,null,"12.8","2：16을 간단한 자연수의 비로 나타내면 1：8 → 1：8=1.6：★, ★=1.6×8=12.8 (m)"],[228,5,2,1,"보라색 찰흙을 만들려면 빨간색 찰흙 15 g과 파란색 찰흙 30 g이 필요해요. 파란색 찰흙 105 g으로 만든다면 빨간색 찰흙은 몇 g 필요할까요?",null,null,"52.5","15：30=★：105 → 외항의 곱=내항의 곱이므로 ★=15×105÷30=52.5"],[229,5,3,1,"페인트 6 L로 담장 48 m²를 칠할 수 있어요. 담장 120 m²를 칠하려면 페인트가 6 L보다 몇 L 더 필요할까요?",null,null,"9","먼저 6：48=★：120 → ★=15 (L), 더 필요한 양은 15−6=9 (L)"],[230,5,2,1,"연필 4자루가 2800원이에요. 9800원으로 같은 연필을 몇 자루 살 수 있을까요?",null,null,"14","4：2800=★：9800 → 외항의 곱=내항의 곱이므로 ★=4×9800÷2800=14"],[231,5,3,1,"사진 속 아빠의 키는 2.5 cm이고 첨성대의 높이는 7.5 cm예요. 아빠의 실제 키가 1.6 m일 때 첨성대의 실제 높이는 몇 m일까요?",null,null,"4.8","2.5：7.5를 간단한 자연수의 비로 나타내면 1：3 → 1：3=1.6：★, ★=1.6×3=4.8 (m)"],[232,5,2,1,"프린터가 6분 동안 90장을 인쇄해요. 15분 동안에는 몇 장을 인쇄할까요?",null,null,"225","6：90=15：★ → 외항의 곱=내항의 곱이므로 ★=90×15÷6=225"],[233,5,3,1,"1.2 kWh의 전기 에너지로 2.4 km를 가는 전기차가 있어요. 6 km를 가려면 전기 에너지가 몇 kWh 필요할까요?",null,null,"3","1.2：2.4=★：6 → 2.4×★=1.2×6 → ★=3"],[234,5,2,1,"환전소에서 우리나라 돈 57000원을 중국 돈 300위안으로 바꿀 수 있어요. 34200원은 몇 위안으로 바꿀 수 있을까요?",null,null,"180","57000：300=34200：★ → 외항의 곱=내항의 곱이므로 ★=300×34200÷57000=180"],[235,6,1,1,"리엘이와 동생이 떡 9개를 2：1로 나누어 먹으려고 해요. 동생은 떡을 몇 개 먹으면 될까요?",null,null,"3","9 × 1/(2+1) = 9 × 1/3 = 3 (개)"],[236,6,2,1,"쿠키 90개를 큰 상자와 작은 상자에 7：8로 나누어 담으려고 해요. 큰 상자에 쿠키를 몇 개 담을까요?",null,null,"42","90 × 7/(7+8) = 90 × 7/15 = 42 (개)"],[237,6,3,1,"정수는 1시간 동안 달리기와 줄넘기를 했어요. 달리기한 시간과 줄넘기한 시간의 비가 7：5일 때 달리기한 시간은 몇 분일까요?",null,null,"35","1시간 = 60분 → 60 × 7/(7+5) = 60 × 7/12 = 35 (분)"],[238,6,1,1,"리엘이와 동생이 떡 9개를 2：1로 나누어 먹으려고 해요. 리엘이는 떡을 몇 개 먹으면 될까요?",null,null,"6","9 × 2/(2+1) = 9 × 2/3 = 6 (개)"],[239,6,2,1,"리본 120 cm를 7：5로 나누어 자르려고 해요. 긴 도막은 몇 cm일까요?",null,null,"70","120 × 7/(7+5) = 120 × 7/12 = 70 (cm)"],[240,6,3,1,"길이가 64 cm인 철사를 남김없이 사용하여 가로와 세로의 비가 9：7인 직사각형을 만들었어요. 가로는 세로보다 몇 cm 더 길까요?",null,null,"4","가로+세로 = 64÷2 = 32 cm → 가로 32 × 9/16 = 18, 세로 32 × 7/16 = 14 → 18-14 = 4 (cm)"],[241,6,2,1,"햇빛 모둠은 5명, 달빛 모둠은 3명이에요. 색종이 72장을 모둠원 수에 따라 나누면 달빛 모둠은 몇 장을 가질까요?",null,null,"27","72 × 3/(5+3) = 72 × 3/8 = 27 (장)"],[242,6,3,1,"주스 2 L를 어른 잔과 어린이 잔에 3：2로 나누어 따르려고 해요. 어른 잔에 따를 주스는 모두 몇 mL일까요?",null,null,"1200","2 L = 2000 mL → 2000 × 3/5 = 1200 (mL)"],[243,6,2,1,"쿠키 80개를 큰 상자와 작은 상자에 7：3으로 나누어 담으려고 해요. 큰 상자에 쿠키를 몇 개 담을까요?",null,null,"56","80 × 7/(7+3) = 80 × 7/10 = 56 (개)"],[244,6,3,1,"용돈 6000원을 형과 동생이 3：1로 나누어 가지면 형은 동생보다 얼마 더 많이 가질까요?",null,null,"3000","형 4500, 동생 1500 → 4500-1500 = 3000 (원)"],[245,6,2,1,"귤 66개를 할머니 댁과 우리 집이 5：6으로 나누어 먹으려고 해요. 할머니 댁은 귤을 몇 개 먹을까요?",null,null,"30","66 × 5/(5+6) = 66 × 5/11 = 30 (개)"],[246,6,3,1,"도토리 70개를 다람쥐와 청설모가 2/3：1/2로 나누어 가지려고 해요. 다람쥐는 도토리를 몇 개 가질까요?",null,null,"40","2/3：1/2 = 4：3(간단한 자연수의 비) → 70 × 4/7 = 40 (개)"],[247,6,2,1,"용돈 8000원을 저금과 간식에 5：3으로 나누어 쓰려고 해요. 저금에 쓸 돈은 얼마일까요?",null,null,"5000","8000 × 5/(5+3) = 8000 × 5/8 = 5000 (원)"],[248,6,3,1,"구슬 36개를 나와 동생이 0.5：0.7로 나누어 가지려고 해요. 동생은 구슬을 몇 개 가질까요?",null,null,"21","0.5：0.7 = 5：7(간단한 자연수의 비) → 36 × 7/12 = 21 (개)"],[249,6,2,1,"용돈 5000원을 저금과 간식에 3：2로 나누어 쓰려고 해요. 간식에 쓸 돈은 얼마일까요?",null,null,"2000","5000 × 2/(3+2) = 5000 × 2/5 = 2000 (원)"],[250,6,3,1,"둘레가 56 cm인 직사각형의 가로와 세로의 비가 4：3이에요. 세로는 몇 cm일까요?",null,null,"12","가로+세로 = 56÷2 = 28 → 28 × 3/7 = 12 (cm)"],[251,6,2,1,"연필 150자루를 1모둠과 2모둠이 2：3으로 나누어 가지려고 해요. 2모둠은 연필을 몇 자루 가질까요?",null,null,"90","150 × 3/(2+3) = 150 × 3/5 = 90 (자루)"],[252,6,3,1,"2시간 동안 공부한 시간과 쉰 시간의 비가 5：1이에요. 공부한 시간은 몇 분일까요?",null,null,"100","2시간 = 120분 → 120 × 5/6 = 100 (분)"],[253,6,2,1,"정후네 가족 3명과 연아네 가족 4명이 농장에서 사과 28개를 땄어요. 가족 구성원 수의 비로 나누면 정후네 가족은 사과를 몇 개 가질까요?",null,null,"12","28 × 3/(3+4) = 28 × 3/7 = 12 (개)"],[254,6,3,1,"젤리 42개를 언니와 내가 4：3으로 나누어 먹으면 언니는 나보다 몇 개 더 많이 먹을까요?",null,null,"6","언니 24, 나 18 → 24-18 = 6 (개)"],[255,6,2,1,"끈 6 m를 5：1로 나누어 자르려고 해요. 짧은 도막은 몇 m일까요?",null,null,"1","6 × 1/(5+1) = 6 × 1/6 = 1 (m)"],[256,6,3,1,"둘레가 120 cm인 직사각형의 가로와 세로의 비가 7：5예요. 가로는 세로보다 몇 cm 더 길까요?",null,null,"10","가로+세로 = 60 → 가로 35, 세로 25 → 35-25 = 10 (cm)"],[257,6,2,1,"물 400 mL를 큰 병과 작은 병에 3：5로 나누어 부으려고 해요. 큰 병에 부을 물은 몇 mL일까요?",null,null,"150","400 × 3/(3+5) = 400 × 3/8 = 150 (mL)"],[258,6,3,1,"쿠키 56개를 언니와 내가 1/4：1/3로 나누어 먹으려고 해요. 나는 쿠키를 몇 개 먹을까요?",null,null,"32","1/4：1/3 = 3：4(간단한 자연수의 비) → 56 × 4/7 = 32 (개)"],[259,6,2,1,"사탕 48개를 형과 동생이 5：3으로 나누어 가지려고 해요. 동생은 사탕을 몇 개 가질까요?",null,null,"18","48 × 3/(5+3) = 48 × 3/8 = 18 (개)"],[260,6,3,1,"딱지 56장을 나와 친구가 5：3으로 나누어 가지면 나는 친구보다 몇 장 더 많이 가질까요?",null,null,"14","나 35, 친구 21 → 35-21 = 14 (장)"],[261,6,2,1,"꽃 모둠은 6명, 별 모둠은 5명이에요. 스티커 88장을 사람 수에 따라 나누면 꽃 모둠은 스티커를 몇 장 가질까요?",null,null,"48","사람 수의 비 6：5 → 88 × 6/(6+5) = 88 × 6/11 = 48 (장)"],[262,6,3,1,"밤 81개를 우리 모둠과 옆 모둠이 5：4로 나누어 가지면 우리 모둠은 옆 모둠보다 몇 개 더 많이 가질까요?",null,null,"9","우리 모둠 45, 옆 모둠 36 → 45-36 = 9 (개)"],[263,6,2,1,"공책 64권을 언니와 내가 3：5로 나누어 가지려고 해요. 언니는 공책을 몇 권 가질까요?",null,null,"24","64 × 3/(3+5) = 64 × 3/8 = 24 (권)"],[264,6,3,1,"1시간 30분 동안 축구와 피구를 2：1로 나누어 했어요. 축구를 한 시간은 몇 분일까요?",null,null,"60","1시간 30분 = 90분 → 90 × 2/3 = 60 (분)"],[265,6,2,1,"밀가루 720 g을 빵과 쿠키에 5：7로 나누어 쓰려고 해요. 쿠키에 쓸 밀가루는 몇 g일까요?",null,null,"420","720 × 7/(5+7) = 720 × 7/12 = 420 (g)"],[266,6,3,1,"구슬 30개를 형과 동생이 3：2로 나누어 가지면 형은 동생보다 몇 개 더 많이 가질까요?",null,null,"6","형 18, 동생 12 → 18-12 = 6 (개)"],[267,6,2,1,"귤 70개를 할머니 댁과 우리 집이 4：3으로 나누어 먹으려고 해요. 우리 집은 귤을 몇 개 먹을까요?",null,null,"30","70 × 3/(4+3) = 70 × 3/7 = 30 (개)"],[268,6,3,1,"사진 120장을 파란 앨범과 노란 앨범에 7：3으로 나누어 꽂으면 파란 앨범에는 노란 앨범보다 몇 장 더 많이 꽂을까요?",null,null,"48","파란 앨범 84, 노란 앨범 36 → 84-36 = 48 (장)"],[269,6,2,1,"용돈 10000원을 학용품과 장난감을 사는 데 3：2로 나누어 쓰려고 해요. 학용품을 사는 데 쓸 돈은 얼마일까요?",null,null,"6000","10000 × 3/(3+2) = 10000 × 3/5 = 6000 (원)"],[270,6,3,1,"밤 40개를 형과 동생이 1/2：1/3로 나누어 가지려고 해요. 형은 밤을 몇 개 가질까요?",null,null,"24","1/2：1/3 = 3：2(간단한 자연수의 비) → 40 × 3/5 = 24 (개)"],[271,6,2,1,"책 99권을 윗칸과 아랫칸에 4：5로 나누어 꽂으려고 해요. 윗칸에 꽂을 책은 몇 권일까요?",null,null,"44","99 × 4/(4+5) = 99 × 4/9 = 44 (권)"],[272,6,3,1,"둘레가 48 cm인 직사각형의 가로와 세로의 비가 5：3이에요. 가로는 몇 cm일까요?",null,null,"15","가로+세로 = 48÷2 = 24 → 24 × 5/8 = 15 (cm)"],[273,6,2,1,"사탕 35개를 형과 동생이 3：4로 나누어 가지려고 해요. 형은 사탕을 몇 개 가질까요?",null,null,"15","35 × 3/(3+4) = 35 × 3/7 = 15 (개)"],[274,6,3,1,"설탕 1 kg을 케이크와 잼에 2：3으로 나누어 쓰려고 해요. 잼에 쓸 설탕은 몇 g일까요?",null,null,"600","1 kg = 1000 g → 1000 × 3/5 = 600 (g)"],[275,6,2,1,"햇빛 모둠은 5명, 달빛 모둠은 3명이에요. 색종이 72장을 모둠원 수에 따라 나누면 햇빛 모둠은 몇 장을 가질까요?",null,null,"45","72 × 5/(5+3) = 72 × 5/8 = 45 (장)"],[276,6,3,1,"둘레가 72 cm인 직사각형의 가로와 세로의 비가 5：4예요. 가로는 몇 cm일까요?",null,null,"20","가로+세로 = 72÷2 = 36 → 36 × 5/9 = 20 (cm)"],[277,6,2,1,"연필 96자루를 1모둠과 2모둠이 5：7로 나누어 가지려고 해요. 2모둠은 연필을 몇 자루 가질까요?",null,null,"56","96 × 7/(5+7) = 96 × 7/12 = 56 (자루)"],[278,6,3,1,"길이가 64 cm인 철사를 남김없이 사용하여 가로와 세로의 비가 9：7인 직사각형을 만들었어요. 가로는 몇 cm일까요?",null,null,"18","가로+세로 = 64÷2 = 32 cm → 가로 = 32 × 9/(9+7) = 32 × 9/16 = 18 (cm)"],[279,6,2,1,"물 350 mL를 큰 병과 작은 병에 4：3으로 나누어 부으려고 해요. 작은 병에 부을 물은 몇 mL일까요?",null,null,"150","350 × 3/(4+3) = 350 × 3/7 = 150 (mL)"],[280,6,3,1,"둘레가 100 cm인 직사각형의 가로와 세로의 비가 3：2예요. 가로는 세로보다 몇 cm 더 길까요?",null,null,"10","가로+세로 = 50 → 가로 30, 세로 20 → 30-20 = 10 (cm)"],[281,6,2,1,"정후네 가족 3명과 연아네 가족 4명이 농장에서 사과 28개를 땄어요. 가족 구성원 수의 비로 나누면 연아네 가족은 사과를 몇 개 가질까요?",null,null,"16","28 × 4/(3+4) = 28 × 4/7 = 16 (개)"],[282,6,3,1,"둘레가 84 cm인 직사각형의 가로와 세로의 비가 4：3이에요. 세로는 몇 cm일까요?",null,null,"18","가로+세로 = 84÷2 = 42 → 42 × 3/7 = 18 (cm)"],[283,6,2,1,"상금 9000원을 청팀과 백팀이 4：5로 나누어 가지려고 해요. 백팀은 얼마를 가질까요?",null,null,"5000","9000 × 5/(4+5) = 9000 × 5/9 = 5000 (원)"],[284,6,3,1,"둘레가 90 cm인 직사각형의 가로와 세로의 비가 8：7이에요. 가로는 세로보다 몇 cm 더 길까요?",null,null,"3","가로+세로 = 45 → 가로 24, 세로 21 → 24-21 = 3 (cm)"],[285,6,2,1,"숲 모둠은 7명, 바다 모둠은 5명이에요. 색종이 96장을 사람 수에 따라 나누면 숲 모둠은 색종이를 몇 장 가질까요?",null,null,"56","사람 수의 비 7：5 → 96 × 7/(7+5) = 96 × 7/12 = 56 (장)"],[286,6,3,1,"흙 45 kg을 화분과 꽃밭에 1.2：0.3으로 나누어 쓰려고 해요. 화분에 쓸 흙은 몇 kg일까요?",null,null,"36","1.2：0.3 = 4：1(간단한 자연수의 비) → 45 × 4/5 = 36 (kg)"],[287,6,2,1,"용돈 12000원을 저금과 간식에 7：5로 나누어 쓰려고 해요. 간식에 쓸 돈은 얼마일까요?",null,null,"5000","12000 × 5/(7+5) = 12000 × 5/12 = 5000 (원)"],[288,6,3,1,"정수는 1시간 동안 달리기와 줄넘기를 했어요. 달리기한 시간과 줄넘기한 시간의 비가 7：5일 때 줄넘기한 시간은 몇 분일까요?",null,null,"25","1시간 = 60분 → 60 × 5/(7+5) = 60 × 5/12 = 25 (분)"],[289,6,2,1,"상금 6000원을 청팀과 백팀이 1：2로 나누어 가지려고 해요. 청팀은 얼마를 가질까요?",null,null,"2000","6000 × 1/(1+2) = 6000 × 1/3 = 2000 (원)"],[290,6,1,0,"25를 2：3으로 비례배분하면 뒤의 수는 얼마일까요?",["5","10","20","15"],3,null,"25 × 3/(2+3) = 25 × 3/5 = 15"],[291,6,1,0,"35를 4：3으로 비례배분하는 식이에요. 35 × 4/(4+3) = 35 × 4/□ 에서 □ 안에 알맞은 수는?",["4","3","7","12"],2,null,"비의 합(4+3=7)이 분모가 돼요. (35 × 4/7 = 20)"],[292,6,1,0,"구슬 24개를 형과 친구가 5：1로 나누어 가져요. 형이 가지는 구슬은 전체의 몇 분의 몇일까요?",["1/5","5/6","1/6","5/1"],1,null,"5/(5+1) = 5/6"],[293,6,1,0,"15를 2：3으로 비례배분하면 뒤의 수는 얼마일까요?",["3","6","9","12"],2,null,"15 × 3/(2+3) = 15 × 3/5 = 9"],[294,6,1,0,"28을 5：2로 비례배분하면 앞의 수는 얼마일까요?",["20","70","8","4"],0,null,"28 × 5/(5+2) = 28 × 5/7 = 20"],[295,6,1,0,"30을 2：3으로 비례배분하면 앞의 수는 얼마일까요?",["6","20","18","12"],3,null,"30 × 2/(2+3) = 30 × 2/5 = 12"],[296,6,1,0,"구슬 20개를 민지와 친구가 3：2로 나누어 가져요. 민지가 가지는 구슬은 전체의 몇 분의 몇일까요?",["2/3","2/5","3/2","3/5"],3,null,"3/(3+2) = 3/5"],[297,6,1,0,"45를 4：5로 비례배분하면 뒤의 수는 얼마일까요?",["5","20","25","30"],2,null,"45 × 5/(4+5) = 45 × 5/9 = 25"],[298,6,1,0,"36을 7：2로 비례배분하면 앞의 수는 얼마일까요?",["4","8","126","28"],3,null,"36 × 7/(7+2) = 36 × 7/9 = 28"],[299,6,1,0,"전체를 주어진 비로 배분하는 것을 무엇이라고 할까요?",["비례배분","비율","비례식","외항"],0,null,"전체를 주어진 비로 배분하는 것을 비례배분이라고 해요."],[300,6,1,0,"20을 1：4로 비례배분하면 뒤의 수는 얼마일까요?",["16","20","4","80"],0,null,"20 × 4/(1+4) = 20 × 4/5 = 16"],[301,6,1,0,"구슬 36개를 하늘 모둠과 친구가 4：5로 나누어 가져요. 하늘 모둠이 가지는 구슬은 전체의 몇 분의 몇일까요?",["4/9","5/9","4/5","5/4"],0,null,"4/(4+5) = 4/9"],[302,6,1,0,"48을 5：3으로 비례배분하면 앞의 수는 얼마일까요?",["80","6","18","30"],3,null,"48 × 5/(5+3) = 48 × 5/8 = 30"],[303,6,1,0,"리엘이와 동생이 떡 9개를 2：1로 나누어 먹어요. 동생이 먹는 떡은 전체의 몇 분의 몇일까요?",["2/3","1/2","2/1","1/3"],3,null,"동생 몫 = 1/(2+1) = 1/3"],[304,6,1,0,"12를 1：2로 비례배분하면 앞의 수는 얼마일까요?",["11","8","4","6"],2,null,"12 × 1/(1+2) = 12 × 1/3 = 4"],[305,6,1,0,"16을 3：1로 비례배분하면 앞의 수는 얼마일까요?",["4","16","12","48"],2,null,"16 × 3/(3+1) = 16 × 3/4 = 12"],[306,6,1,0,"20을 3：2로 비례배분하는 식이에요. 20 × 3/(3+2) = 20 × 3/□ 에서 □ 안에 알맞은 수는?",["2","5","3","6"],1,null,"비의 합(3+2=5)이 분모가 돼요. (20 × 3/5 = 12)"],[307,6,1,0,"10을 2：3으로 비례배분하려고 해요. 앞의 수는 전체의 몇 분의 몇일까요?",["2/3","3/5","3/2","2/5"],3,null,"2/(2+3) = 2/5"],[308,6,1,0,"32를 3：5로 비례배분하면 뒤의 수는 얼마일까요?",["12","20","24","4"],1,null,"32 × 5/(3+5) = 32 × 5/8 = 20"],[309,6,1,0,"54를 4：5로 비례배분하면 앞의 수는 얼마일까요?",["30","6","18","24"],3,null,"54 × 4/(4+5) = 54 × 4/9 = 24"],[310,7,1,1,"비례식이 되도록 □ 안에 알맞은 수를 구하세요. 36：9=□：2",null,null,"8","외항의 곱 = 내항의 곱: 36×2 = 9×□, 72 = 9×□, □ = 8"],[311,7,2,0,"3：11의 전항과 후항에 같은 수를 곱해 9：33을 만들었어요. 곱한 수는?",["3","6","9","11"],0,null,"3×3 = 9, 11×3 = 33이므로 3을 곱했어요. 비율은 같아요."],[312,7,3,1,"다현이가 1500원, 윤수가 600원을 내서 도화지 35장을 샀어요. 낸 금액에 따라 나누어 가진다면 윤수는 도화지를 몇 장 가져야 할까요?",null,null,"10","1500：600 = 5：2 → 35 × 2/(5+2) = 10 (장)"],[313,7,1,1,"비례식이 되도록 □ 안에 알맞은 수를 구하세요. 4：5=20：□",null,null,"25","외항의 곱 = 내항의 곱: 4×□ = 5×20 = 100, □ = 25"],[314,7,2,0,"3.5：4.9를 가장 간단한 자연수의 비로 나타내면?",["5：7","35：49","7：5","1：2"],0,null,"3.5：4.9에 ×10 → 35：49, ÷7 → 5：7"],[315,7,3,1,"다현이가 1500원, 윤수가 600원을 내서 도화지 35장을 샀어요. 낸 금액에 따라 나누어 가진다면 다현이는 도화지를 몇 장 가져야 할까요?",null,null,"25","1500：600 = 5：2 → 35 × 5/(5+2) = 25 (장)"],[316,7,1,0,"54：27을 가장 간단한 자연수의 비로 나타내면?",["27：1","1：2","6：3","2：1"],3,null,"54：27의 전항과 후항을 27로 나누면 2：1이에요."],[317,7,2,1,"비례식이 되도록 □ 안에 알맞은 수를 구하세요. 3：□=12：56",null,null,"14","외항의 곱 = 내항의 곱: 3×56 = □×12, 168 = □×12, □ = 14"],[318,7,3,0,"1/4：0.8을 가장 간단한 자연수의 비로 나타내면?",["1：8","5：16","16：5","25：80"],1,null,"1/4 = 0.25 → 0.25：0.8에 ×100 → 25：80, ÷5 → 5：16"],[319,7,2,0,"35：14의 전항과 후항을 같은 수로 나누어 5：2를 만들었어요. 나눈 수는?",["5","2","7","14"],2,null,"35÷7 = 5, 14÷7 = 2이므로 7로 나누었어요. 비율은 같아요."],[320,7,3,0,"5：6과 비율이 같은 비를 찾아 비례식으로 바르게 나타낸 것은?",["5：6=1/5：1/6","5：6=10：12","5：6=8：7","5：6=6：5"],1,null,"5：6의 전항과 후항에 2를 곱하면 10：12예요. 1/5：1/6 = 6：5라서 5：6과 비율이 달라요."],[321,7,2,1,"사과 9개로 사과주스 4병을 만들 수 있어요. 사과주스 12병을 만드는 데 사과가 몇 개 필요할까요?",null,null,"27","9：4=★：12 → 외항의 곱 9×12 = 내항의 곱 4×★, 108 = 4×★, ★ = 27 (개). 전항의 곱·후항의 곱이 아니라 외항의 곱·내항의 곱을 비교해요."],[322,7,2,1,"물이 일정하게 나오는 수도로 들이가 15 L인 수조를 가득 채우는 데 24초가 걸렸어요. 들이가 50 L인 수조를 가득 채우는 데 걸리는 시간은 몇 초일까요?",null,null,"80","15：24=50：★ → 15×★ = 24×50 = 1200, ★ = 80 (초)"],[323,7,2,1,"찰흙 420 g을 3：4로 나누어 각각 거북과 악어를 만들려고 해요. 거북을 만드는 데 필요한 찰흙은 몇 g일까요?",null,null,"180","420 × 3/(3+4) = 420 × 3/7 = 180 (g)"],[324,7,2,1,"찰흙 420 g을 3：4로 나누어 각각 거북과 악어를 만들려고 해요. 악어를 만드는 데 필요한 찰흙은 몇 g일까요?",null,null,"240","420 × 4/(3+4) = 420 × 4/7 = 240 (g)"]];
+// ===== 픽셀 비례 랠리 규칙 (게임 화면과 파이어베이스 연결 코드가 똑같은 코드를 써요) =====
+// 한 판 = 3바퀴 경주. 바퀴마다 '문제 관문' 4곳에서 멈춰 문제를 풀어요(⭐·⭐⭐·⭐⭐⭐ 길 중 골라 들어가기).
+// 1등이 들어오면 30초 뒤 끝나요(모두 들어오면 바로). 아무도 못 들어와도 10분이 지나면 끝나요.
+// 점수 = 순위 점수(1~5등: 100·70·50·35·25) + 문제 점수(⭐10 · ⭐⭐20 · ⭐⭐⭐30). 순위는 들어온 차례, 못 들어온 사람은 달린 거리로 정해요.
+var RULE = { LEAD: 5000, LAPS: 3, GATES: 4, DUR: 600000, AFTER: 30000, PLACE: [100, 70, 50, 35, 25], PT: [0, 10, 20, 30] };
+function rNew(n, seed) {
+  var S = { n: n, v: 0, fin: [], q: [], end: 0 };
+  for (var i = 0; i < n; i++) { S.fin.push(0); S.q.push(0); }
+  return S;
+}
+function rFirst(S) { var f = 0; for (var i = 0; i < S.n; i++) if (S.fin[i] && (!f || S.fin[i] < f)) f = S.fin[i]; return f; }
+function rAllDone(S) { for (var i = 0; i < S.n; i++) if (!S.fin[i] && !S.q[i]) return false; return true; }
+// 경주가 끝나는 시각(아직 모르면 0). t0 = 출발 시각
+function rEndAt(S, t0) {
+  if (S.end) return S.end;
+  var f = rFirst(S), cap = t0 + RULE.DUR;
+  return f ? Math.min(cap, f + RULE.AFTER) : cap;
+}
+function rOver(S, t, t0) { return !!S.end || t >= rEndAt(S, t0); }
+function rFinish(S, i, t, t0) {
+  if (!(i >= 0 && i < S.n) || S.fin[i] || S.q[i] || S.end || (t0 && t > rEndAt(S, t0) + 1500)) return { x: 'n' };
+  S.v++; S.fin[i] = t;
+  if (rAllDone(S)) S.end = t;
+  var place = 0; for (var j = 0; j < S.n; j++) if (S.fin[j] && S.fin[j] <= t) place++;
+  return { k: 1, place: place };
+}
+function rQuit(S, i, t) {
+  if (!(i >= 0 && i < S.n) || S.q[i] || S.fin[i]) return { x: 'n' };
+  S.v++; S.q[i] = 1;
+  if (rAllDone(S)) S.end = t || 1;
+  return { k: 1 };
+}
+// 순위: 들어온 사람(빨리 들어온 차례) → 달리는 중인 사람(달린 거리 prog가 긴 차례) → 나간 사람
+function rRank(S, prog) {
+  var ids = [], rank = [];
+  for (var i = 0; i < S.n; i++) ids.push(i);
+  function key(i) { return S.fin[i] ? [0, S.fin[i]] : S.q[i] ? [2, 0] : [1, -(+(prog && prog[i]) || 0)]; }
+  ids.sort(function (a, b) { var A = key(a), B = key(b); return A[0] - B[0] || A[1] - B[1] || a - b; });
+  ids.forEach(function (p, j) { rank[p] = j + 1; });
+  return rank;
+}
+function rScore(S, i, rank, qpt) { return S.q[i] ? 0 : (RULE.PLACE[rank - 1] || 0) + Math.max(0, qpt | 0); }
+
+// ===== 깃허브 페이지 + 파이어베이스판: 게임·기록을 Firebase Realtime Database로 주고받아요 =====
+// firebase-config.js(선생님이 채우는 파일)의 FIREBASE_CONFIG로 연결해요. 모든 자료는 데이터베이스의 'snow/kart/' 아래에 있어요(눈싸움·숨바꼭질 게임과 같은 파이어베이스를 함께 써도 방·기록이 섞이지 않아요).
+//   rooms/방번호 (방·선수·경주 상태 ps) · ev/방번호/순서 (물풍선·꿀 웅덩이·결승·나가기 사건) · st/방번호/선수 (위치·속도·바퀴·문제 점수)
+//   hb/방번호/선수 (살아 있다는 신호) · lobby/반 (기다리는 방) · records/반 (경주 기록) · rank/반 (1등 횟수·최고 점수)
+// 앱스크립트판(Code.gs)과 같은 함수 이름·결과 모양을 써서 게임 화면 코드는 그대로예요.
+var FBNet = (function () {
+  var MAXP = 5, AUTO_MIN = 2, AUTO_START = 25000, WAIT_STALE = 15000, LOBBY_AGE = 600000, LEAD = RULE.LEAD, GRACE = 3000, ROOM_AGE = 6 * 3600000;
+  var DB = null, err = '';
+  // ---- 데이터베이스 도구(Firebase compat SDK) ----
+  function firebaseDB() {
+    var cfg = window.FIREBASE_CONFIG || {};
+    if (!window.firebase || !firebase.database) throw new Error('파이어베이스 도구(lib/firebase-*.js)를 불러오지 못했어요.');
+    if (!cfg.databaseURL || /여기에|YOUR/.test(cfg.databaseURL)) throw new Error('firebase-config.js에 파이어베이스 설정(databaseURL 등)을 넣어 주세요.');
+    if (!firebase.apps.length) firebase.initializeApp(cfg);
+    var d = firebase.database(), off = 0;
+    d.ref('.info/serverTimeOffset').on('value', function (s) { off = s.val() || 0; });
+    function R(p) { return d.ref('snow/kart/' + p); }
+    return {
+      now: function () { return Date.now() + off; },
+      get: function (p) { return R(p).once('value').then(function (s) { return s.val(); }); },
+      set: function (p, v) { return R(p).set(v); },
+      update: function (p, v) { return R(p).update(v); },
+      remove: function (p) { return R(p).remove(); },
+      push: function (p, v) { return R(p).push(v); },
+      // fn(지금 값) → 새 값(undefined면 그만두기). 처음 값이 비어 있으면 서버 값으로 다시 불러요.
+      txn: function (p, fn, allowNull) {
+        return R(p).transaction(function (cur) {
+          if (cur === null && !allowNull) return null;
+          return fn(cur);
+        }, null, false).then(function (r) { return { committed: r.committed, val: r.snapshot.val() }; });
+      },
+      watch: function (p, cb) { var r = R(p), h = r.on('value', function (s) { cb(s.val()); }); return function () { r.off('value', h); }; },
+      watchAdded: function (p, cb) { var r = R(p), h = r.on('child_added', function (s) { cb(s.key, s.val()); }); return function () { r.off('child_added', h); }; }
+    };
+  }
+  function db() {
+    if (DB) return DB;
+    try { DB = window.__DBMOCK || firebaseDB(); } catch (e) { err = e.message; throw e; }
+    return DB;
+  }
+  // ---- 작은 도구 ----
+  function clean(s, n) { return String(s == null ? '' : s).replace(/[<>\t\r\n"']/g, '').trim().replace(/^[=+\-@]+/, '').slice(0, n); }
+  function cls_(s) { return clean(String(s || '').replace(/\s+/g, ''), 20); }
+  function code_(s) { return String(s || '').replace(/\D/g, '').slice(0, 4); }
+  function key(s) { return s ? encodeURIComponent(s).replace(/\./g, '%2E') : '_'; }
+  function int_(v, lo, hi) { v = Math.round(Number(v)); return isFinite(v) ? Math.max(lo, Math.min(hi, v)) : lo; }
+  function idx(room, sid) { var p = room && room.p || []; for (var i = 0; i < p.length; i++) if (p[i].sid === sid) return i; return -1; }
+  function arr(a) { if (Array.isArray(a)) return a; if (!a) return []; var o = []; Object.keys(a).forEach(function (k) { o[+k] = a[k]; }); return o; }
+  // 데이터베이스는 빈 배열·빈 객체를 지워요. 읽은 방을 게임이 쓰는 모양으로 되돌려요.
+  function fixRoom(r) {
+    if (!r) return r;
+    r.p = arr(r.p).filter(Boolean);
+    if (r.ps) {
+      var S = r.ps;
+      ['fin', 'q'].forEach(function (k) { var a = arr(S[k]); for (var i = 0; i < S.n; i++) a[i] = a[i] || 0; S[k] = a; });
+      S.v = S.v || 0; S.end = S.end || 0;
+    }
+    r.lid = r.lid || {};
+    return r;
+  }
+  function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function who(p) { var n = clean(p.name, 10), sid = clean(p.sid, 40); return n && sid ? { n: n, sid: sid } : null; }
+  function start(room, now) { room.st = 'play'; room.startAt = now; room.ps = rNew(room.p.length, room.seed); }
+
+  // ---- 방 만들기 · 매칭 ----
+  function newRoom(cls, w) {
+    var D = db(), tries = 0;
+    function attempt() {
+      tries++;
+      var c = String(1000 + Math.floor(Math.random() * 9000)), now = D.now(), made = null;
+      return D.get('rooms/' + c).then(function (old) {
+        if (old && old.st !== 'closed' && now - (old.at || 0) < ROOM_AGE) return null;
+        return Promise.all([D.remove('ev/' + c), D.remove('st/' + c), D.remove('hb/' + c), D.remove('res/' + c)]).then(function () {
+          return D.txn('rooms/' + c, function (cur) {
+            if (cur && cur.st !== 'closed' && now - (cur.at || 0) < ROOM_AGE) return undefined;
+            made = { c: c, cls: cls, st: 'wait', seed: Math.floor(Math.random() * 2147483646) + 1, p: [w], readyAt: 0, at: now, g: 0 };
+            return made;
+          }, true);
+        }).then(function (r) { return r.committed ? made : null; });
+      }).then(function (room) {
+        if (room) return Promise.all([D.set('hb/' + room.c + '/' + w.sid, now), D.set('lobby/' + key(cls) + '/' + room.c, now)]).then(function () { return room; });
+        return tries < 20 ? attempt() : null;
+      });
+    }
+    return attempt();
+  }
+  function addTo(code, w, check) {
+    var D = db(), out = null;
+    return D.txn('rooms/' + code, function (room) {
+      room = fixRoom(room); out = null;
+      if (!room || room.st === 'closed') { out = { ok: false, msg: code + '번 방이 없어요. 번호를 확인해 주세요.' }; return undefined; }
+      if (idx(room, w.sid) >= 0) { out = { ok: true, code: code }; return undefined; }
+      if (room.st !== 'wait') { out = { ok: false, msg: '이미 경주를 시작한 방이에요.' }; return undefined; }
+      if (room.p.length >= MAXP) { out = { ok: false, msg: '방이 꽉 찼어요(5명).' }; return undefined; }
+      if (check && !check(room)) { out = { ok: false, msg: '방 상태가 바뀌었어요.' }; return undefined; }
+      room.p.push(w);
+      if (room.p.length === AUTO_MIN) room.readyAt = D.now();
+      if (room.p.length >= MAXP) start(room, D.now());
+      out = { ok: true, code: code, started: room.st === 'play', cls: room.cls };
+      return room;
+    }).then(function () {
+      if (!out) out = { ok: false, msg: code + '번 방이 없어요. 번호를 확인해 주세요.' };
+      if (out.ok) { D.set('hb/' + code + '/' + w.sid, D.now()); if (out.started) D.remove('lobby/' + key(out.cls) + '/' + code); }
+      return out;
+    });
+  }
+  function lobbyRooms(cls) {
+    var D = db(), now = D.now();
+    return D.get('lobby/' + key(cls)).then(function (L) {
+      var codes = Object.keys(L || {}).filter(function (c) { return now - L[c] < LOBBY_AGE; });
+      return Promise.all(codes.map(function (c) {
+        return D.get('rooms/' + c).then(function (room) {
+          room = fixRoom(room);
+          if (!room || room.st !== 'wait' || room.p.length >= MAXP || room.cls !== cls) { if (!room || room.st !== 'wait') D.remove('lobby/' + key(cls) + '/' + c); return null; }
+          return D.get('hb/' + c + '/' + room.p[0].sid).then(function (h) { return now - (+h || 0) > WAIT_STALE ? null : room; });
+        });
+      })).then(function (list) { return list.filter(Boolean); });
+    });
+  }
+  // ---- 대전 중: 방·사건·친구 기록을 실시간으로 받아 두어요 ----
+  var Live = { code: null, room: null, st: {}, hb: {}, ev: {}, offs: [] };
+  function live(code) {
+    if (Live.code === code) return;
+    Live.offs.forEach(function (f) { try { f(); } catch (e) {} });
+    var D = db();
+    Live = { code: code, room: null, st: {}, hb: {}, ev: {}, offs: [], got: false };
+    Live.offs.push(D.watch('rooms/' + code, function (v) { Live.room = fixRoom(v); Live.got = true; }));
+    Live.offs.push(D.watch('st/' + code, function (v) { Live.st = v || {}; }));
+    Live.offs.push(D.watch('hb/' + code, function (v) { Live.hb = v || {}; }));
+    Live.offs.push(D.watchAdded('ev/' + code, function (k, v) { if (v) { if (!v.r) v.r = {}; Live.ev[k] = v; } }));
+  }
+  var F = {
+    createRoom: function (p) {
+      var w = who(p || {}); if (!w) return Promise.resolve({ ok: false, msg: '이름이 없어요. 새로 고침 뒤 다시 해 주세요.' });
+      var cls = cls_(p.cls);
+      return newRoom(cls, w).then(function (room) { return room ? { ok: true, code: room.c } : { ok: false, msg: '빈 방 번호를 찾지 못했어요. 다시 눌러 주세요.' }; });
+    },
+    quickMatch: function (p) {
+      var w = who(p || {}); if (!w) return Promise.resolve({ ok: false, msg: '이름이 없어요. 새로 고침 뒤 다시 해 주세요.' });
+      var cls = cls_(p.cls);
+      return lobbyRooms(cls).then(function (list) {
+        var mine = list.filter(function (r) { return idx(r, w.sid) >= 0; })[0];
+        if (mine) return { ok: true, code: mine.c };
+        list.sort(function (a, b) { return b.p.length - a.p.length; });
+        function next(i) {
+          if (i >= list.length) return newRoom(cls, w).then(function (room) { return room ? { ok: true, code: room.c } : { ok: false, msg: '빈 방 번호를 찾지 못했어요. 다시 눌러 주세요.' }; });
+          return addTo(list[i].c, w).then(function (r) { return r.ok ? r : next(i + 1); });
+        }
+        return next(0);
+      });
+    },
+    joinRoom: function (p) {
+      var w = who(p || {}); if (!w) return Promise.resolve({ ok: false, msg: '이름이 없어요. 새로 고침 뒤 다시 해 주세요.' });
+      return addTo(code_(p.code), w);
+    },
+    startRoom: function (p) {
+      var code = code_(p.code), sid = clean(p.sid, 40), D = db(), out = { ok: true }, cls = '';
+      return D.txn('rooms/' + code, function (room) {
+        room = fixRoom(room); out = { ok: true };
+        if (!room || room.st !== 'wait') return undefined;
+        if (idx(room, sid) !== 0) { out = { ok: false, msg: '방장만 시작할 수 있어요.' }; return undefined; }
+        if (room.p.length < 2) { out = { ok: false, msg: '2명 이상이어야 시작할 수 있어요.' }; return undefined; }
+        start(room, D.now()); cls = room.cls; out = { ok: true, started: 1 };
+        return room;
+      }).then(function () { if (out.started) D.remove('lobby/' + key(cls) + '/' + code); return { ok: out.ok, msg: out.msg }; });
+    },
+    leaveRoom: function (p) {
+      var code = code_(p.code), sid = clean(p.sid, 40), D = db(), cls = null;
+      return D.txn('rooms/' + code, function (room) {
+        room = fixRoom(room); cls = null;
+        if (!room || room.st !== 'wait') return undefined;
+        var i = idx(room, sid); if (i < 0) return undefined;
+        room.p.splice(i, 1);
+        if (!room.p.length) { room.st = 'closed'; cls = room.cls; } else if (room.p.length < AUTO_MIN) room.readyAt = 0;
+        return room;
+      }).then(function () { if (cls !== null) D.remove('lobby/' + key(cls) + '/' + code); return { ok: true }; });
+    },
+    listRooms: function (p) {
+      return lobbyRooms(cls_(p && p.cls)).then(function (list) {
+        return list.map(function (r) { return { c: r.c, n: r.p[0].n, k: r.p.length, at: r.at }; }).sort(function (a, b) { return b.at - a.at; }).slice(0, 12);
+      });
+    },
+    sync: function (p) {
+      var code = code_(p.code), sid = clean(p.sid, 40), D = db(), now = D.now();
+      live(code);
+      var first = Live.got ? Promise.resolve() : D.get('rooms/' + code).then(function (v) { if (!Live.got) { Live.room = fixRoom(v); } });
+      return first.then(function () {
+        var room = Live.room;
+        if (!room || room.st === 'closed') return { ok: false, gone: true, msg: '방이 없어졌어요.' };
+        var me = idx(room, sid);
+        if (me < 0) return { ok: false, gone: true, msg: room.st === 'wait' ? '대기실에서 빠졌어요(연결이 오래 끊김). 다시 들어가 주세요.' : '이 방의 선수가 아니에요.' };
+        Live.hb[sid] = now;
+        var writes = [];
+        if (now - (Live.hbAt || 0) > 900) { Live.hbAt = now; writes.push(D.set('hb/' + code + '/' + sid, now)); }   // 살아 있다는 신호는 약 1초마다
+        var ages = room.p.map(function (q) { var h = +Live.hb[q.sid] || 0; return q.sid === sid ? 0 : (h ? now - h : 0); });
+        var chain = Promise.all(writes);
+        if (room.st === 'wait') {
+          var stale = ages.some(function (a, i) { return i !== me && a > WAIT_STALE; });
+          var due = room.p.length >= AUTO_MIN && room.readyAt && now - room.readyAt >= AUTO_START;
+          if (stale || due) {
+            var cls = room.cls, started = false;
+            chain = chain.then(function () {
+              return D.txn('rooms/' + code, function (r2) {
+                r2 = fixRoom(r2); started = false;
+                if (!r2 || r2.st !== 'wait') return undefined;
+                r2.p = r2.p.filter(function (q) { return q.sid === sid || now - (+Live.hb[q.sid] || now) <= WAIT_STALE; });
+                if (r2.p.length >= AUTO_MIN && r2.readyAt && now - r2.readyAt >= AUTO_START) { start(r2, D.now()); started = true; }
+                else if (!r2.p.length) r2.st = 'closed';
+                else if (r2.p.length < AUTO_MIN) r2.readyAt = 0;
+                return r2;
+              });
+            }).then(function (r) { if (r.committed && r.val) Live.room = fixRoom(r.val); if (started) D.remove('lobby/' + key(cls) + '/' + code); });
+          }
+        }
+        return chain.then(function () {
+          room = Live.room; me = idx(room, sid);
+          if (me < 0) return { ok: false, gone: true, msg: '대기실에서 빠졌어요. 다시 들어가 주세요.' };
+          var since = +p.since || 0, fires = [], ks = [];
+          if (room.st === 'play') {
+            for (var g = since + 1; Live.ev[g]; g++) fires.push(Live.ev[g]);
+            ks = room.p.map(function (q) { return stOf(Live.st[q.sid]); });
+          }
+          return {
+            ok: true, st: room.st, you: me, names: room.p.map(function (q) { return q.n; }), seed: room.st === 'play' ? room.seed : 0,
+            autoIn: room.st === 'wait' && room.readyAt ? Math.max(0, AUTO_START - (now - room.readyAt)) : 0,
+            startAt: room.startAt || 0, lead: LEAD, dur: RULE.DUR, grace: GRACE,
+            fires: fires, ks: ks, ps: room.st === 'play' ? JSON.parse(JSON.stringify(room.ps)) : null, ages: ages, now: D.now()
+          };
+        });
+      });
+    },
+    // 물풍선(b)·꿀 웅덩이(h)·꿀 치움(x)·결승(f)·나가기(q): 방 상태(ps)를 한 번에 바꾸고 순서 번호(g)를 매겨요.
+    shoot: function (p) {
+      var code = code_(p.code), sid = clean(p.sid, 40), e = p.e, D = db();
+      if (!e || typeof e !== 'object' || ['b', 'h', 'x', 'f', 'q'].indexOf(e.t) < 0) return Promise.resolve({ ok: false, msg: '잘못된 기록이에요.' });
+      var id = Math.floor(Number(e.id)); if (!(id > 0)) return Promise.resolve({ ok: false, msg: '잘못된 기록이에요.' });
+      var out = null;
+      return D.txn('rooms/' + code, function (room) {
+        room = fixRoom(room); out = null;
+        if (!room || room.st !== 'play') { out = { ok: false, gone: true, msg: '경주 중인 방이 아니에요.' }; return undefined; }
+        var me = idx(room, sid);
+        if (me < 0) { out = { ok: false, msg: '이 방의 선수가 아니에요.' }; return undefined; }
+        var L = room.lid[me];
+        if (L && L.id === id) { out = { ok: true, dupG: L.g }; return undefined; }
+        if (L && L.id > id) { out = { ok: false, late: true }; return undefined; }
+        var now = D.now(), S = room.ps, t0 = room.startAt + LEAD;
+        if (e.t !== 'q' && (S.end || now < t0 - 500 || now > rEndAt(S, t0) + GRACE)) { out = { ok: false, late: true, msg: '경주 시간이 아니에요.' }; return undefined; }
+        var ev = { t: e.t, id: id, w: me, s: now, v0: S.v, r: { k: 1 } };
+        if (e.t === 'b') ev.tg = int_(e.tg, -1, MAXP - 1);
+        else if (e.t === 'h') { ev.x = int_(e.x, 0, 4000); ev.y = int_(e.y, 0, 4000); ev.k = int_(e.k, 0, 999999); }
+        else if (e.t === 'x') ev.k = int_(e.k, 0, 999999);
+        else if (e.t === 'f') ev.r = rFinish(S, me, now, t0);
+        else ev.r = rQuit(S, me, now);
+        ev.v = S.v; ev.g = (room.g || 0) + 1; room.g = ev.g;
+        room.lid[me] = { id: id, g: ev.g };
+        out = { ok: true, ev: ev };
+        return room;
+      }).then(function () {
+        if (!out) return { ok: false, gone: true, msg: '경주 중인 방이 아니에요.' };
+        if (out.dupG) return D.get('ev/' + code + '/' + out.dupG).then(function (v) { if (v && !v.r) v.r = {}; return v ? { ok: true, ev: v } : { ok: false, late: true }; });
+        if (out.ok) { Live.ev[out.ev.g] = out.ev; return D.set('ev/' + code + '/' + out.ev.g, out.ev).then(function () { return out; }); }
+        return out;
+      });
+    },
+    // 끝나면 각자 결과 한 줄을 남겨요(한 방에서 한 사람당 한 번). 순위는 들어온 차례와 달린 거리(st 기록)로 정해요.
+    saveResult: function (p) {
+      var code = code_(p.code), sid = clean(p.sid, 40), D = db();
+      return D.get('res/' + code + '/' + sid).then(function (done) {
+        if (done) { done.msg = '이미 기록했어요.'; return done; }
+        return Promise.all([D.get('rooms/' + code), D.get('st/' + code)]).then(function (got) {
+          var room = fixRoom(got[0]), st = got[1] || {};
+          if (!room) return { ok: false, msg: '방 정보가 없어서 기록하지 못했어요.' };
+          var me = idx(room, sid);
+          if (me < 0 || room.st !== 'play') return { ok: false, msg: '이 방의 선수가 아니에요.' };
+          var t0 = room.startAt + LEAD, now = D.now(), playing = !rOver(room.ps, now, t0), quit = !!room.ps.q[me] || !!p.quit || (playing && !room.ps.fin[me]);
+          var step = quit && !room.ps.q[me] && !room.ps.fin[me] ? D.txn('rooms/' + code, function (r2) { r2 = fixRoom(r2); if (!r2 || !r2.ps || r2.ps.q[me] || r2.ps.fin[me]) return undefined; rQuit(r2.ps, me, now); return r2; }).then(function (r) { if (r.val) room = fixRoom(r.val); }) : Promise.resolve();
+          return step.then(function () {
+            var S = room.ps, n = room.p.length;
+            var pts = room.p.map(function (q, i) { var k = st[q.sid]; return i === me ? int_(p.pt, 0, 99999) : (k ? int_(k.pt, 0, 99999) : 0); });
+            var prog = room.p.map(function (q, i) { var k = st[q.sid]; return i === me ? Number(p.prog) || 0 : (k ? Number(k.pg) || 0 : 0); });
+            var rank = rRank(S, prog), score = rScore(S, me, rank[me], pts[me]);
+            var res = S.q[me] ? '나감' : rank[me] === 1 ? '1등' : rank[me] + '등';
+            var name = room.p[me].n, cls = room.cls, ok = int_(p.ok, 0, 999);
+            var row = { at: Date.now(), cls: cls, room: code, name: name, with: room.p.filter(function (q, i) { return i !== me; }).map(function (q) { return q.n; }).join(', '),
+              n: n, rank: rank[me] + '/' + n, res: res, score: score, qpt: pts[me],
+              time: S.fin[me] ? ((S.fin[me] - t0) / 1000).toFixed(1) + '초' : '못 들어옴',
+              ok: ok + '/' + int_(p.nq, 0, 999), sid: sid };
+            return D.txn('res/' + code + '/' + sid, function (cur) { return cur ? undefined : { pending: 1 }; }, true).then(function (t) {
+              if (!t.committed) return D.get('res/' + code + '/' + sid).then(function (d) { d = d || {}; d.ok = true; d.msg = '이미 기록했어요.'; return d; });
+              return D.push('records/' + key(cls), row).then(function () {
+                return D.txn('rank/' + key(cls) + '/' + key(name), function (r) { r = r || { name: name, cls: cls, w: 0, g: 0, best: 0 }; r.g++; if (res === '1등') r.w++; r.best = Math.max(r.best || 0, score); return r; }, true);
+              }).then(function () {
+                var out = { ok: true, msg: '기록을 저장했어요! (' + res + ' · ' + score + '점)' };
+                return D.set('res/' + code + '/' + sid, out).then(function () { return out; });
+              });
+            });
+          });
+        });
+      });
+    },
+    getRanking: function (cls) {
+      cls = cls_(typeof cls === 'object' ? cls && cls.cls : cls);
+      return db().get('rank/' + key(cls)).then(function (o) {
+        return Object.keys(o || {}).map(function (k) { return o[k]; }).sort(function (a, b) { return b.w - a.w || (b.best || 0) - (a.best || 0) || a.g - b.g; }).slice(0, 10);
+      });
+    },
+    // 선생님: what = 'rec' 기록 초기화 · 'csv' 기록 내려받기 · 'room' 지난 방 정리
+    teacherReset: function (p) {
+      var pin = String(p.pin || ''), cls = cls_(p.cls), what = p.what, D = db();
+      var PIN = String(window.TEACHER_PIN || '');
+      if (!PIN) return Promise.resolve({ ok: false, msg: 'firebase-config.js의 TEACHER_PIN이 비어 있어서 선생님 메뉴가 꺼져 있어요.' });
+      if (pin !== PIN) return Promise.resolve({ ok: false, msg: '비밀번호가 틀렸어요.' });
+      if (what === 'room') return Promise.all(['rooms', 'ev', 'st', 'hb', 'lobby', 'res'].map(function (k) { return D.remove(k); })).then(function () { return { ok: true, msg: '지난 게임 방을 모두 정리했어요. (게임 중인 방도 끊겨요)' }; });
+      return D.get(cls ? 'records/' + key(cls) : 'records').then(function (data) {
+        var rows = [];
+        function addRec(o) { Object.keys(o || {}).forEach(function (k) { rows.push(o[k]); }); }
+        if (cls) addRec(data); else Object.keys(data || {}).forEach(function (c) { addRec(data[c]); });
+        rows.sort(function (a, b) { return (a.at || 0) - (b.at || 0); });
+        var csv = toCsv(['시각', '반 코드', '방', '이름', '함께한 친구', '인원', '순위', '결과', '점수', '문제 점수', '기록', '정답', '등록번호'],
+          rows.map(function (r) { return [new Date(r.at).toLocaleString('ko-KR'), r.cls, r.room, r.name, r.with, r.n, r.rank, r.res, r.score, r.qpt, r.time, r.ok, r.sid]; }));
+        var fname = '픽셀비례랠리기록_' + (cls || '전체') + '_' + today() + '.csv';
+        download(fname, csv);
+        if (what === 'csv') return { ok: true, msg: rows.length + '줄을 ' + fname + '로 내려받았어요.' };
+        return Promise.all([D.remove(cls ? 'records/' + key(cls) : 'records'), D.remove(cls ? 'rank/' + key(cls) : 'rank')]).then(function () {
+          return { ok: true, msg: (cls ? '반 코드 ' + cls : '전체') + ' 기록 ' + rows.length + '개를 지웠어요. 지우기 전 내용은 ' + fname + '로 내려받았어요.' };
+        });
+      });
+    }
+  };
+  function toCsv(head, rows) {
+    function c(v) { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+    return '﻿' + [head].concat(rows).map(function (r) { return r.map(c).join(','); }).join('\r\n');
+  }
+  function download(name, text) {
+    try { var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv' })); a.download = name; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000); } catch (e) {}
+  }
+  // 위치 기록은 기다리지 않고 바로 보내고(0.1초마다), 친구 기록은 받는 즉시 화면이 매 프레임 읽어 가요.
+  function stOf(s) { return s ? { p: arr(s.p).map(arr), ok: s.ok | 0, pt: s.pt | 0, f: s.f | 0, pg: +s.pg || 0, lap: s.lap | 0, st: s.st } : null; }
+  function pushState(code, sid, k) {
+    try { var D = db(); code = code_(code); sid = clean(sid, 40); k.st = D.now(); if (Live.code === code) Live.st[sid] = k; D.set('st/' + code + '/' + sid, k).catch(function () {}); } catch (e) {}
+  }
+  function peers(code) {
+    code = code_(code);
+    if (Live.code !== code || !Live.room) return null;
+    return Live.room.p.map(function (q) { return stOf(Live.st[q.sid]); });
+  }
+  return {
+    delay: 450, syncMs: 180, pushState: pushState, peers: peers,
+    call: function (fn, arg) {
+      if (!F[fn]) return Promise.reject(new Error('없는 기능: ' + fn));
+      try { db(); } catch (e) { return Promise.reject(e); }
+      var to = new Promise(function (_, rej) { setTimeout(function () { rej(new Error('20초 안에 파이어베이스 응답이 없어요.')); }, 20000); });
+      return Promise.race([Promise.resolve().then(function () { return F[fn](arg || {}); }), to]);
+    },
+    error: function () { try { db(); return ''; } catch (e) { return e.message; } }
+  };
+})();
+var Net = FBNet;
+// 선생님 메뉴: 두 번 눌러야 실행돼요(내려받기는 한 번).
+function teacherInit() {
+  ['tBtn', 'tBtn3', 'tBtn4'].forEach(function (id) {
+    var btn = document.getElementById(id); if (!btn) return;
+    var label = btn.textContent, what = btn.getAttribute('data-what'), armed = 0;
+    btn.onclick = function () {
+      var pin = document.getElementById('tPin').value, cls = cleanCls(document.getElementById('tCls').value), msg = document.getElementById('tMsg');
+      if (!pin) { msg.textContent = '비밀번호를 써 주세요.'; return; }
+      if (what !== 'csv' && Date.now() - armed > 6000) {
+        armed = Date.now();
+        btn.textContent = '정말 지울까요? 한 번 더 누르세요 (' + (what === 'room' ? '모든 방' : cls ? '반 코드 ' + cls : '전체') + ')';
+        setTimeout(function () { if (armed && Date.now() - armed >= 6000) btn.textContent = label; }, 6100);
+        return;
+      }
+      armed = 0; btn.disabled = true; btn.textContent = '처리하는 중…';
+      Net.call('teacherReset', { pin: pin, cls: cls, what: what }).then(function (r) {
+        btn.disabled = false; btn.textContent = label;
+        msg.textContent = (r && r.ok ? '✅ ' : '❌ ') + (r && r.msg ? r.msg : ''); if (r && r.ok) loadRank();
+      }).catch(function (e) { btn.disabled = false; btn.textContent = label; msg.textContent = '❌ 오류: ' + (e && e.message ? e.message : String(e)); });
+    };
+  });
+}
+
+
+// ===== 설정 =====
+var COL = ['#ff4d5e', '#3d8bff', '#2ecc71', '#ffc93c', '#b06bff'];
+var DOT = ['🔴', '🔵', '🟢', '🟡', '🟣'];
+var LNAME = { 1: '비의 성질', 2: '간단한 자연수의 비', 3: '비례식', 4: '비례식의 성질', 5: '비례식 활용', 6: '비례배분', 7: '단원 마무리' };
+var QSEC = [[0, 20, 25, 30], [0, 40, 50, 60]];          // 제한 시간(초): [고르기, 숫자 입력][단계]
+var TURBO = [0, 1.4, 2.2, 3.0], ITEM_P = [0, 0.6, 1, 1];  // 맞히면 터보(초) · 아이템 받을 확률
+var OK_HOLD = 0.9, WRONG_HOLD = 3.5;                     // 맞힘 표시 · 틀리면 풀이 보는 시간(초)
+var MAXSP = 150, ACC = 1.25, TURN = 2.75, HW = 34;       // 최고 속도(px/초) · 가속 · 회전 · 길 반폭
+var OFF = 0.55, CURB = 0.9;
+var ITEMS = {
+  turbo: { e: '🚀', n: '터보 로켓' }, balloon: { e: '💧', n: '물풍선' }, honey: { e: '🍯', n: '꿀 웅덩이' },
+  shield: { e: '🫧', n: '비눗방울 방패' }, star: { e: '🌟', n: '별똥 질주' }
+};
+var BOT = [
+  { sp: 0.84, acc: 0.62, t: [[0, 7, 11, 15], [0, 16, 24, 32]], tier: [0.6, 0.3, 0.1] },
+  { sp: 0.92, acc: 0.76, t: [[0, 5, 8, 11], [0, 12, 18, 24]], tier: [0.3, 0.45, 0.25] },
+  { sp: 0.98, acc: 0.88, t: [[0, 4, 6, 8], [0, 9, 13, 17]], tier: [0.15, 0.35, 0.5] }
+];
+var BOTNAME = ['번개토끼', '구름곰', '솜사탕여우', '바람거북', '별빛다람쥐', '파도펭귄', '불꽃고양이', '모래낙타'];
+
+function $(s) { return document.querySelector(s); }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+var store = {
+  get: function (k, d) { try { var v = localStorage.getItem('prally_' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set: function (k, v) { try { localStorage.setItem('prally_' + k, JSON.stringify(v)); } catch (e) {} }
+};
+function cleanName(s, n) { return String(s == null ? '' : s).replace(/[<>\t\r\n"']/g, '').trim().slice(0, n); }
+function cleanCls(s) { return cleanName(String(s || '').replace(/\s+/g, ''), 20); }
+function show(id) { ['home', 'lobby', 'game', 'result'].forEach(function (k) { $('#' + k).classList.toggle('hide', k !== id); }); window.scrollTo(0, 0); }
+var toastT = 0;
+function toast(msg, sec) { var t = $('#toast'); t.textContent = msg; t.classList.remove('hide'); toastT = (sec || 1.8); }
+function rnd(a, b) { return a + Math.random() * (b - a); }
+function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+function lerp(a, b, u) { return a + (b - a) * u; }
+function fmtT(ms) { ms = Math.max(0, ms); var m = Math.floor(ms / 60000), s = Math.floor((ms % 60000) / 1000); return m + ':' + (s < 10 ? '0' : '') + s; }
+function angDiff(a, b) { var d = (b - a) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return d; }
+function mulberry(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function hash2(x, y, s) { var h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(s | 0, 2246822519); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0); }
+function hexRGB(h) { var n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+
+// 짧은 효과음
+var Snd = { ac: null, on: store.get('snd', true) };
+function beep(kind) {
+  if (!Snd.on) return;
+  try {
+    if (!Snd.ac) { var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; Snd.ac = new AC(); }
+    var ac = Snd.ac, t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
+    var spec = { ok: [660, 990, 0.18, 'square'], no: [220, 140, 0.3, 'sawtooth'], item: [520, 1240, 0.3, 'triangle'], boost: [300, 900, 0.35, 'sawtooth'],
+      go: [880, 880, 0.35, 'square'], tick: [440, 440, 0.15, 'square'], hit: [600, 120, 0.4, 'square'], gate: [500, 700, 0.12, 'triangle'],
+      throw: [800, 300, 0.2, 'triangle'], fin: [523, 1046, 0.6, 'triangle'], shield: [1200, 600, 0.2, 'sine'], key: [700, 700, 0.04, 'square'] }[kind];
+    if (!spec) return;
+    o.type = spec[3]; o.frequency.setValueAtTime(spec[0], t); o.frequency.exponentialRampToValueAtTime(spec[1], t + spec[2]);
+    g.gain.setValueAtTime(0.07, t); g.gain.exponentialRampToValueAtTime(0.001, t + spec[2]);
+    o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + spec[2] + 0.02);
+  } catch (e) {}
+}
+
+// ===== 트랙 (세 곳 모두 이 게임용으로 새로 그린 모양) =====
+var MW = 1500, MH = 1150, STEP = 4;
+var TRACKS = [
+  { n: '🌸 벚꽃 공원', k: 'spring', pts: [[300, 250], [700, 180], [1100, 230], [1310, 450], [1180, 660], [900, 610], [760, 790], [960, 950], [700, 1030], [350, 970], [190, 700], [250, 450]],
+    pal: { g: ['#5cb85c', '#52ab52', '#67c267', '#4b9f4b'], r: ['#5b6070', '#555a69', '#60657a'], ca: '#ff5a5a', cb: '#f4f4f4', ln: '#f2f0d0', off: 'g' } },
+  { n: '🏜️ 모래 협곡', k: 'desert', pts: [[250, 300], [620, 190], [930, 330], [1260, 210], [1360, 520], [1100, 700], [1260, 960], [860, 1010], [620, 800], [360, 960], [170, 700]],
+    pal: { g: ['#e8c27a', '#ddb56c', '#f0cd88', '#d4a960'], r: ['#7a6a5a', '#726252', '#82725f'], ca: '#ff8a3d', cb: '#fff3d6', ln: '#fff0b8', off: 's' } },
+  { n: '❄️ 눈꽃 마을', k: 'snow', pts: [[300, 190], [1180, 190], [1320, 400], [930, 520], [1270, 720], [1190, 960], [320, 970], [190, 760], [620, 600], [200, 420]],
+    pal: { g: ['#eef5ff', '#e2ebf8', '#f7fbff', '#d6e2f2'], r: ['#6a7488', '#626c80', '#717b90'], ca: '#3d8bff', cb: '#ffffff', ln: '#ffe680', off: 'w' } }
+];
+var GATE_AT = [0.17, 0.39, 0.61, 0.83], PAD_AT = [0.07, 0.28, 0.5, 0.72, 0.93];
+
+function catmull(P, step) {
+  var raw = [], n = P.length, i, k;
+  for (i = 0; i < n; i++) {
+    var p0 = P[(i - 1 + n) % n], p1 = P[i], p2 = P[(i + 1) % n], p3 = P[(i + 2) % n];
+    for (k = 0; k < 80; k++) {
+      var t = k / 80, t2 = t * t, t3 = t2 * t;
+      raw.push([0.5 * ((2 * p1[0]) + (-p0[0] + p2[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3),
+        0.5 * ((2 * p1[1]) + (-p0[1] + p2[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3)]);
+    }
+  }
+  // 같은 간격(step px)으로 다시 뽑기
+  var out = [raw[0]], acc = 0;
+  for (i = 1; i <= raw.length; i++) {
+    var a = raw[i - 1], b = raw[i % raw.length], d = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    while (acc + d >= step) { var u = (step - acc) / d; a = [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u]; out.push(a); d = Math.hypot(b[0] - a[0], b[1] - a[1]); acc = 0; }
+    acc += d;
+  }
+  if (Math.hypot(out[out.length - 1][0] - out[0][0], out[out.length - 1][1] - out[0][1]) < step * 0.5) out.pop();
+  return out;
+}
+
+var SPR = {};   // 픽셀 그림 조각
+function sprite(rows, pal) {
+  var h = rows.length, w = rows[0].length, c = document.createElement('canvas'); c.width = w; c.height = h;
+  var x = c.getContext('2d');
+  for (var r = 0; r < h; r++) for (var k = 0; k < w; k++) { var ch = rows[r][k]; if (ch !== '.' && pal[ch]) { x.fillStyle = pal[ch]; x.fillRect(k, r, 1, 1); } }
+  return c;
+}
+var DECO = {
+  tree: ['....gGGg....', '..gGGGGGGg..', '.gGGhGGGGGg.', 'gGGGGGGhGGGg', 'gGhGGGGGGGGg', 'gGGGGGhGGGGg', '.gGGGGGGGGg.', '..ggGGGGgg..', '....tTTt....', '....tTTt....', '...ttTTtt...'],
+  pine: ['.....gg.....', '....gGGg....', '...gwGGwg...', '...gGGGGg...', '..gwGGGGwg..', '..gGGGGGGg..', '.gwGGGGGGwg.', '.gGGGGGGGGg.', 'gGGGGGGGGGGg', '.....tt.....', '.....tt.....'],
+  cactus: ['....gg....', '...gGGg...', '...gGGg.g.', '.g.gGGg.Gg', '.Gg.gGGgGg', '.GgggGGgg.', '..gGGGGg..', '....gGg...', '....gGg...', '...ttttt..'],
+  rock: ['..rrrr..', '.rRRRrr.', 'rRRRRRrr', 'rRRrRRRr', '.rrrrrr.'],
+  snowman: ['...www...', '..wkwkw..', '..wwoww..', '...www...', '.wwwwwww.', 'wwwwkwwww', 'wwwwwwwww', 'wwwwkwwww', '.wwwwwww.'],
+  flower: ['.p.', 'pyp', '.p.'],
+  bush: ['.gGGg.', 'gGhGGg', 'gGGGhg', '.gggg.']
+};
+var DECO_PAL = {
+  spring: { tree: { g: '#e86aa0', G: '#ff9cc6', h: '#ffd1e4', t: '#7a4a2a', T: '#5a3218' }, bush: { g: '#2f8a3e', G: '#46b05a', h: '#7ad48a' }, flower: { p: '#fff', y: '#ffd23f' }, rock: { r: '#6d7280', R: '#9aa0ad' } },
+  desert: { cactus: { g: '#2f7a3e', G: '#4caf50', t: '#b07a3a' }, rock: { r: '#8a5a3a', R: '#c08050' }, bush: { g: '#7a8a3a', G: '#a0b050', h: '#c8d870' }, flower: { p: '#ff6a3d', y: '#ffd23f' } },
+  snow: { pine: { g: '#1f5a3a', G: '#2f7a4e', w: '#ffffff', t: '#6a4a2a' }, snowman: { w: '#ffffff', k: '#2a2a3a', o: '#ff8a3d' }, rock: { r: '#7a8496', R: '#b6c0d2' }, bush: { g: '#c9d6ea', G: '#ffffff', h: '#e9f0fa' } }
+};
+var DECO_SET = { spring: [['tree', 5, 6], ['bush', 3, 3], ['flower', 0, 0], ['flower', 0, 0], ['rock', 3, 2]], desert: [['cactus', 4, 5], ['rock', 3, 2], ['rock', 3, 2], ['bush', 3, 3], ['flower', 0, 0]], snow: [['pine', 5, 6], ['snowman', 4, 4], ['bush', 3, 3], ['rock', 3, 2]] };
+
+function buildTrack(ti) {
+  var D = TRACKS[ti], P = catmull(D.pts, STEP), N = P.length, T = { i: ti, n: D.n, k: D.k, pal: D.pal, N: N, px: [], py: [], tx: [], ty: [], ob: [] };
+  for (var i = 0; i < N; i++) {
+    var a = P[(i - 2 + N) % N], b = P[(i + 2) % N], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1;
+    T.px.push(P[i][0]); T.py.push(P[i][1]); T.tx.push(dx / l); T.ty.push(dy / l);
+  }
+  T.gates = GATE_AT.map(function (f) { return Math.floor(f * N); });
+  var rr = mulberry(1234 + ti);
+  T.pads = PAD_AT.map(function (f) { var j = Math.floor(f * N); return { i: j, d: Math.round((rr() - 0.5) * HW), x: 0, y: 0 }; });
+  T.pads.forEach(function (p) { p.x = T.px[p.i] - T.ty[p.i] * p.d; p.y = T.py[p.i] + T.tx[p.i] * p.d; });
+  // 길 모양(가면) → 땅 종류: 2 길 · 1 연석 · 0 길 밖
+  var m = document.createElement('canvas'); m.width = MW; m.height = MH;
+  var c = m.getContext('2d'); c.fillStyle = '#000'; c.fillRect(0, 0, MW, MH); c.lineJoin = c.lineCap = 'round';
+  c.beginPath(); for (i = 0; i <= N; i++) { var q = i % N; if (i) c.lineTo(T.px[q], T.py[q]); else c.moveTo(T.px[q], T.py[q]); } c.closePath();
+  c.strokeStyle = 'rgb(128,0,0)'; c.lineWidth = (HW + 6) * 2; c.stroke();
+  c.strokeStyle = 'rgb(255,0,0)'; c.lineWidth = HW * 2; c.stroke();
+  var md = c.getImageData(0, 0, MW, MH).data, surf = new Uint8Array(MW * MH);
+  for (i = 0; i < MW * MH; i++) { var v = md[i * 4]; surf[i] = v > 200 ? 2 : v > 70 ? 1 : 0; }
+  T.surf = surf;
+  // 픽셀 지도 그리기
+  var cv = document.createElement('canvas'); cv.width = MW; cv.height = MH;
+  var x = cv.getContext('2d'), img = x.createImageData(MW, MH), d = img.data;
+  var G = D.pal.g.map(hexRGB), R = D.pal.r.map(hexRGB), CA = hexRGB(D.pal.ca), CB = hexRGB(D.pal.cb);
+  for (var y = 0; y < MH; y++) for (var xx = 0; xx < MW; xx++) {
+    var o = y * MW + xx, s = surf[o], h = hash2(xx >> 1, y >> 1, ti), col;
+    if (s === 2) col = R[(h % 9 === 0) ? 2 : (h % 5 === 0 ? 1 : 0)];
+    else if (s === 1) col = (((xx >> 3) + (y >> 3)) & 1) ? CA : CB;
+    else { var hh = hash2(xx >> 2, y >> 2, ti + 7); col = G[(hh % 13 === 0) ? 3 : (h % 7 === 0 ? 2 : (hh % 3 === 0 ? 1 : 0))]; }
+    d[o * 4] = col[0]; d[o * 4 + 1] = col[1]; d[o * 4 + 2] = col[2]; d[o * 4 + 3] = 255;
+  }
+  function put(px, py, rgb) { px |= 0; py |= 0; if (px < 0 || py < 0 || px >= MW || py >= MH) return; var o = (py * MW + px) * 4; d[o] = rgb[0]; d[o + 1] = rgb[1]; d[o + 2] = rgb[2]; }
+  function blend(px, py, rgb, a) { px |= 0; py |= 0; if (px < 0 || py < 0 || px >= MW || py >= MH) return; var o = (py * MW + px) * 4; d[o] = d[o] * (1 - a) + rgb[0] * a; d[o + 1] = d[o + 1] * (1 - a) + rgb[1] * a; d[o + 2] = d[o + 2] * (1 - a) + rgb[2] * a; }
+  var LN = hexRGB(D.pal.ln), WH = [245, 245, 245], BK = [30, 30, 36];
+  // 가운데 점선
+  for (i = 0; i < N; i++) if ((i >> 2) % 2 === 0) for (var u0 = 0; u0 < 4; u0++) { var j0 = (i + 1) % N, ux = lerp(T.px[i], T.px[j0], u0 / 4), uy = lerp(T.py[i], T.py[j0], u0 / 4); put(ux, uy, LN); put(ux + 1, uy, LN); put(ux, uy + 1, LN); put(ux + 1, uy + 1, LN); }
+  // 길의 한 구간(점 번호 j0~j1) 둘레 픽셀을 하나하나 보며 가까운 점 기준 (앞뒤 위치, 옆 위치)를 알려 줘요 → 빈틈 없이 칠하기
+  function paintZone(j0, j1, fn) {
+    var js = [], q; for (q = j0; q <= j1; q++) js.push((q + N) % N);
+    var x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+    js.forEach(function (j) { x0 = Math.min(x0, T.px[j]); x1 = Math.max(x1, T.px[j]); y0 = Math.min(y0, T.py[j]); y1 = Math.max(y1, T.py[j]); });
+    for (var yy = Math.max(0, (y0 - HW - 8) | 0); yy < Math.min(MH, y1 + HW + 8); yy++) for (var xq = Math.max(0, (x0 - HW - 8) | 0); xq < Math.min(MW, x1 + HW + 8); xq++) {
+      if (T.surf[yy * MW + xq] !== 2) continue;
+      var bj = -1, bd = 1e9, bk = 0;
+      for (var k = 0; k < js.length; k++) { var j = js[k], dx = xq - T.px[j], dy = yy - T.py[j], dd = dx * dx + dy * dy; if (dd < bd) { bd = dd; bj = j; bk = k; } }
+      if (bk === 0 || bk === js.length - 1) { var dx2 = xq - T.px[bj], dy2 = yy - T.py[bj], al = dx2 * T.tx[bj] + dy2 * T.ty[bj]; if ((bk === 0 && al < 0) || (bk === js.length - 1 && al > 0)) continue; }
+      var lat = (xq - T.px[bj]) * (-T.ty[bj]) + (yy - T.py[bj]) * T.tx[bj], along = (bk - (js.length - 1)) * STEP + ((xq - T.px[bj]) * T.tx[bj] + (yy - T.py[bj]) * T.ty[bj]);
+      fn(xq, yy, along, lat);
+    }
+  }
+  // 출발선(체크 무늬)
+  paintZone(-3, 0, function (px, py, along, lat) { if (along > -12 && along <= 0) put(px, py, ((Math.floor((lat + HW) / 4) + Math.floor(-along / 4)) & 1) ? BK : WH); });
+  // 관문 앞 세 갈래 길(⭐ 노랑 · ⭐⭐ 주황 · ⭐⭐⭐ 빨강)과 바닥 별
+  var LC = [[255, 214, 64], [255, 150, 40], [255, 70, 90]];
+  T.gates.forEach(function (gi) {
+    paintZone(gi - 22, gi, function (px, py, along, lat) {
+      var lane = lat < -HW / 3 ? 0 : lat > HW / 3 ? 2 : 1, edge = Math.abs(Math.abs(lat) - HW / 3) < 1;
+      if (edge) { if ((Math.floor(-along / 6)) % 2 === 0) put(px, py, WH); }
+      else blend(px, py, LC[lane], 0.4);
+    });
+    // 바닥 별(1·2·3개)
+    var STAR = ['..#..', '.###.', '#####', '.###.', '.#.#.'];
+    for (var lane = 0; lane < 3; lane++) {
+      var mid = (lane - 1) * (HW * 2 / 3), cnt = lane + 1;
+      for (var c3 = 0; c3 < cnt; c3++) {
+        var off = (c3 - (cnt - 1) / 2) * 7, j2 = (gi - 12 + N) % N;
+        var cx = T.px[j2] - T.ty[j2] * (mid + off), cy = T.py[j2] + T.tx[j2] * (mid + off);
+        for (var r5 = 0; r5 < 5; r5++) for (var c5 = 0; c5 < 5; c5++) if (STAR[r5][c5] === '#') put(cx - 2 + c5, cy - 2 + r5, WH);
+      }
+    }
+  });
+  // 빨라지는 화살표 판
+  var PADC = [[40, 230, 255], [255, 255, 255]];
+  T.pads.forEach(function (p) {
+    var ang = Math.atan2(T.ty[p.i], T.tx[p.i]), ca = Math.cos(ang), sa = Math.sin(ang);
+    for (var u = -9; u <= 9; u++) for (var v = -7; v <= 7; v++) {
+      var px = p.x + ca * u - sa * v, py = p.y + sa * u + ca * v;
+      var chev = ((u + 9 + Math.abs(v)) % 8 + 8) % 8 < 3;
+      put(px, py, chev ? PADC[1] : PADC[0]);
+    }
+  });
+  // 장식(길에서 떨어진 곳에만)
+  var set = DECO_SET[D.k], dp = DECO_PAL[D.k];
+  function farFromRoad(px, py, m) {
+    for (var q = 0; q < N; q += 3) { var dx = T.px[q] - px, dy = T.py[q] - py; if (dx * dx + dy * dy < m * m) return false; }
+    return true;
+  }
+  var placed = 0;
+  for (var tries = 0; tries < 2600 && placed < 260; tries++) {
+    var pick = set[Math.floor(rr() * set.length)], spr = DECO[pick[0]], pal = dp[pick[0]];
+    if (!pal) continue;
+    var px = 20 + rr() * (MW - 40), py = 20 + rr() * (MH - 40);
+    if (!farFromRoad(px, py, HW + 18 + spr[0].length)) continue;
+    var w = spr[0].length, h2 = spr.length;
+    // 그림자
+    for (var r6 = 0; r6 < h2; r6++) for (var c6 = 0; c6 < w; c6++) if (spr[r6][c6] !== '.') blend(px - w / 2 + c6 + 2, py - h2 + r6 + 2, [0, 0, 0], 0.18);
+    for (r6 = 0; r6 < h2; r6++) for (c6 = 0; c6 < w; c6++) { var ch = spr[r6][c6]; if (ch !== '.' && pal[ch]) put(px - w / 2 + c6, py - h2 + r6, hexRGB(pal[ch])); }
+    if (pick[1]) T.ob.push({ x: px, y: py - pick[2] / 2, r: pick[1] });
+    placed++;
+  }
+  x.putImageData(img, 0, 0);
+  T.map = cv;
+  // 작은 지도
+  var mm = document.createElement('canvas'); mm.width = 120; mm.height = 92;
+  var mx = mm.getContext('2d'), sc = Math.min(112 / MW, 84 / MH); T.msc = sc; T.mox = (120 - MW * sc) / 2; T.moy = (92 - MH * sc) / 2;
+  mx.strokeStyle = 'rgba(255,255,255,.85)'; mx.lineWidth = 3; mx.lineJoin = 'round'; mx.beginPath();
+  for (i = 0; i <= N; i += 4) { var q2 = i % N; var X = T.mox + T.px[q2] * sc, Y = T.moy + T.py[q2] * sc; if (i) mx.lineTo(X, Y); else mx.moveTo(X, Y); } mx.closePath(); mx.stroke();
+  mx.fillStyle = '#ffb02e'; T.gates.forEach(function (gi) { mx.fillRect(T.mox + T.px[gi] * sc - 2, T.moy + T.py[gi] * sc - 2, 4, 4); });
+  mx.fillStyle = '#fff'; mx.fillRect(T.mox + T.px[0] * sc - 3, T.moy + T.py[0] * sc - 1, 6, 2);
+  T.mini = mm;
+  return T;
+}
+function surfAt(T, x, y) { x |= 0; y |= 0; if (x < 0 || y < 0 || x >= MW || y >= MH) return -1; return T.surf[y * MW + x]; }
+
+// ===== 차 그림: 오른쪽(→)을 보는 기본 모양을 32방향으로 돌려 둬요 =====
+var KART = [
+  '..ww.....ww...',
+  '.wwww...wwww..',
+  '.bbbbbbbbbbbb.',
+  'bbbbssbbbbbbbf',
+  'bbbshhhhbbbbbf',
+  'bbbshHHhbbbbbf',
+  'bbbshhhhbbbbbf',
+  'bbbbssbbbbbbbf',
+  '.bbbbbbbbbbbb.',
+  '.wwww...wwww..',
+  '..ww.....ww...'
+];
+var KDIR = 32, KS = 20;
+function kartSprites(color) {
+  var base = hexRGB(color), lt = base.map(function (v) { return Math.min(255, v + 70); }), dk = base.map(function (v) { return v * 0.6 | 0; });
+  var pal = { w: [34, 34, 40], b: base, s: lt, h: [250, 250, 250], H: [40, 50, 80], f: dk };
+  var out = [], H = KART.length, W = KART[0].length;
+  for (var k = 0; k < KDIR; k++) {
+    var c = document.createElement('canvas'); c.width = KS; c.height = KS;
+    var x = c.getContext('2d'), img = x.createImageData(KS, KS), d = img.data, a = k / KDIR * Math.PI * 2, ca = Math.cos(a), sa = Math.sin(a);
+    for (var py = 0; py < KS; py++) for (var px = 0; px < KS; px++) {
+      var dx = px - KS / 2 + 0.5, dy = py - KS / 2 + 0.5;
+      var sx = ca * dx + sa * dy + W / 2, sy = -sa * dx + ca * dy + H / 2;
+      var ix = Math.floor(sx), iy = Math.floor(sy);
+      if (ix < 0 || iy < 0 || ix >= W || iy >= H) continue;
+      var ch = KART[iy][ix]; if (ch === '.') continue;
+      var col = pal[ch], o = (py * KS + px) * 4; d[o] = col[0]; d[o + 1] = col[1]; d[o + 2] = col[2]; d[o + 3] = 255;
+    }
+    x.putImageData(img, 0, 0); out.push(c);
+  }
+  return out;
+}
+function kartSprite(K, a) { var k = Math.round(((a % (Math.PI * 2)) + Math.PI * 2) / (Math.PI * 2) * KDIR) % KDIR; return K.spr[k]; }
+
+// ===== 경주 상태 =====
+var G = null, LV = 1, TR = -1, LAST = { mode: 'cpu', cpu: 4 };
+var keys = {}, Pad = { l: 0, r: 0, b: 0 };
+var SID = store.get('sid', '') || ('s' + Math.random().toString(36).slice(2, 12) + Date.now().toString(36));
+store.set('sid', SID);
+function sNow() { return G && G.net ? Date.now() + (G.off || 0) : Date.now(); }
+
+// 단계별 문제 순서: 씨앗(seed)으로 섞고 차시가 번갈아 나오게 해요(모두 같은 순서).
+function makeDeck(seed) {
+  var r = mulberry(seed), deck = { 1: [], 2: [], 3: [] };
+  [1, 2, 3].forEach(function (t) {
+    var by = {};
+    QD.forEach(function (q, i) { if (q[2] === t) (by[q[1]] = by[q[1]] || []).push(i); });
+    var ls = Object.keys(by);
+    ls.forEach(function (l) { var a = by[l]; for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)); var x = a[i]; a[i] = a[j]; a[j] = x; } });
+    for (var i = ls.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)); var x = ls[i]; ls[i] = ls[j]; ls[j] = x; }
+    var more = true, k = 0;
+    while (more) { more = false; ls.forEach(function (l) { if (by[l][k] != null) { deck[t].push(by[l][k]); more = true; } }); k++; }
+  });
+  return deck;
+}
+
+function newKart(i, name, local, bot) {
+  return { i: i, name: name, col: COL[i % COL.length], spr: kartSprites(COL[i % COL.length]), x: 0, y: 0, a: 0, sp: 0, va: 0,
+    lap: 0, idx: 0, gd: 0, st: 'race', boost: 0, bmul: 1, spin: 0, slow: 0, shield: 0, inv: 0, item: null, roll: 0, ww: 0,
+    local: local, bot: bot, pg: 0, pt: 0, ok: 0, nq: 0, place: i + 1, buf: [], f: 0, ai: { off: 0, lane: 1, think: 0, ans: false, itemT: 0, wob: rnd(0, 6) }, tag: null };
+}
+function placeOnGrid(K, slot) {
+  var T = G.T, N = T.N, back = 14 + slot * 15, d = (slot % 2 ? 1 : -1) * 13, j = (N - Math.ceil(back / STEP)) % N;
+  K.x = T.px[j] - T.ty[j] * d; K.y = T.py[j] + T.tx[j] * d; K.a = Math.atan2(T.ty[j], T.tx[j]); K.idx = j; K.ai.off = d;
+}
+function startRace(o) {
+  // o: { mode, names, me, seed, t0, track, lv, net }
+  var T = buildTrack(o.track);
+  G = { mode: o.mode, T: T, names: o.names, n: o.names.length, me: o.me, seed: o.seed, t0: o.t0, lv: o.lv, net: o.net || null, off: o.off || 0,
+    S: rNew(o.names.length, o.seed), K: [], balls: [], honey: [], parts: [], deck: makeDeck(o.seed), qp: { 1: 0, 2: 0, 3: 0 },
+    q: null, wrongs: [], over: false, feedL: [], lastG: 0, fid: 0, hk: 0, cnt: 4, pushAt: 0, endShown: false, rr: mulberry(o.seed ^ 77) };
+  for (var i = 0; i < G.n; i++) {
+    var local = i === o.me || o.mode === 'cpu';
+    var K = newKart(i, o.names[i], local, o.mode === 'cpu' && i !== o.me ? BOT[o.lv] : null);
+    placeOnGrid(K, i); G.K.push(K);
+  }
+  $('#placeOf').textContent = G.n;
+  buildTags();
+  show('game');
+  $('#qp').classList.add('hide');
+  setItemUI();
+  resize();
+  G.last = performance.now();
+  requestAnimationFrame(frame);
+}
+
+// ===== 차 움직이기 =====
+function inputOf(K, dt) {
+  if (K.i === G.me && K.st === 'race' && !G.q) {
+    var l = keys.ArrowLeft || keys.KeyA || Pad.l, r = keys.ArrowRight || keys.KeyD || Pad.r;
+    return { steer: (r ? 1 : 0) - (l ? 1 : 0), brake: !!(keys.ArrowDown || keys.KeyS || Pad.b) };
+  }
+  return botInput(K, dt);
+}
+function laneOff(l) { return (l - 1) * HW * 2 / 3; }
+function botInput(K, dt) {
+  var T = G.T, N = T.N, ai = K.ai;
+  var gi = K.gd < RULE.GATES && K.lap < RULE.LAPS ? T.gates[K.gd] : -1, toGate = gi >= 0 ? (gi - K.idx + N) % N : 9999;
+  if (toGate < 70) {
+    if (!ai.chose) { ai.chose = 1; var c = K.bot ? K.bot.tier : [0.3, 0.45, 0.25], u = Math.random(); ai.lane = u < c[0] ? 0 : u < c[0] + c[1] ? 1 : 2; }
+    ai.off += clamp(laneOff(ai.lane) - ai.off, -40 * dt, 40 * dt);
+  } else {
+    ai.chose = 0; ai.wob += dt * 0.6;
+    ai.off += clamp(Math.sin(ai.wob) * HW * 0.45 - ai.off, -15 * dt, 15 * dt);
+  }
+  var look = (K.idx + 9) % N, tx = T.px[look] - T.ty[look] * ai.off, ty = T.py[look] + T.tx[look] * ai.off;
+  var want = Math.atan2(ty - K.y, tx - K.x), steer = clamp(angDiff(K.a, want) * 2.4, -1, 1);
+  if (K.item && K.bot) { ai.itemT -= dt; if (ai.itemT <= 0) useItem(K); }
+  return { steer: steer, brake: false };
+}
+function stepKart(K, dt) {
+  var T = G.T, inp = inputOf(K, dt);
+  K.boost = Math.max(0, K.boost - dt); K.slow = Math.max(0, K.slow - dt); K.shield = Math.max(0, K.shield - dt); K.inv = Math.max(0, K.inv - dt);
+  if (K.boost <= 0) K.bmul = 1;
+  if (K.st === 'gate') {
+    K.sp = Math.max(0, K.sp - 500 * dt);
+    K.a += clamp(angDiff(K.a, K.ga), -4 * dt, 4 * dt);
+    K.x += Math.cos(K.a) * K.sp * dt; K.y += Math.sin(K.a) * K.sp * dt;
+    K.va = 0;
+    return;
+  }
+  var s = surfAt(T, K.x, K.y), f = s === 2 ? 1 : s === 1 ? CURB : s === 0 ? OFF : 0.3;
+  if (K.inv > 0) f = Math.max(f, 0.92);
+  var top = MAXSP * (K.bot ? K.bot.sp : 1) * f * (K.boost > 0 ? K.bmul : 1) * (K.slow > 0 ? 0.45 : 1) * (K.st === 'fin' ? 0.55 : 1);
+  if (K.spin > 0) {
+    K.spin -= dt; K.sp *= Math.exp(-4 * dt); K.va += 15 * dt;
+  } else {
+    K.va = 0;
+    if (inp.brake) K.sp = Math.max(-35, K.sp - 320 * dt);
+    else if (K.sp < top) K.sp = Math.min(top, K.sp + Math.max(26, (top - K.sp) * ACC) * dt);
+    else K.sp = Math.max(top, K.sp - 200 * dt);
+    var tf = clamp(Math.abs(K.sp) / 60, 0, 1);
+    K.a += inp.steer * TURN * tf * dt * (K.sp < 0 ? -1 : 1);
+  }
+  K.x += Math.cos(K.a) * K.sp * dt; K.y += Math.sin(K.a) * K.sp * dt;
+  if (K.x < 8 || K.y < 8 || K.x > MW - 8 || K.y > MH - 8) { K.x = clamp(K.x, 8, MW - 8); K.y = clamp(K.y, 8, MH - 8); K.sp *= 0.5; }
+  T.ob.forEach(function (o) {
+    var dx = K.x - o.x, dy = K.y - o.y, d = Math.hypot(dx, dy), m = o.r + 5;
+    if (d < m && d > 0.01) { K.x = o.x + dx / d * m; K.y = o.y + dy / d * m; K.sp *= 0.6; }
+  });
+  // 빨라지는 판
+  T.pads.forEach(function (p) { if (Math.abs(K.x - p.x) < 10 && Math.abs(K.y - p.y) < 10 && K.boost < 0.9) { K.boost = 1.0; K.bmul = Math.max(K.bmul, 1.45); if (K.i === G.me) beep('boost'); } });
+  // 흙먼지·불꽃
+  if (Math.abs(K.sp) > 40 && s === 0 && Math.random() < 0.5) part(K.x - Math.cos(K.a) * 7, K.y - Math.sin(K.a) * 7, T.pal.off === 'w' ? '#ffffff' : T.pal.off === 's' ? '#c9a060' : '#6a8a4a', 0.4);
+  if (K.boost > 0 && Math.random() < 0.8) part(K.x - Math.cos(K.a) * 8, K.y - Math.sin(K.a) * 8, Math.random() < 0.5 ? '#ffb02e' : '#ff4d5e', 0.25);
+}
+function part(x, y, c, life, vx, vy) { if (G.parts.length < 400) G.parts.push({ x: x, y: y, c: c, t: life, vx: vx || rnd(-10, 10), vy: vy || rnd(-10, 10) }); }
+
+// 길 위 어디쯤인지(가까운 점 번호) · 바퀴 · 관문
+function track(K, now) {
+  var T = G.T, N = T.N, best = -1, bd = 1e9;
+  for (var o = -12; o <= 30; o++) {
+    var j = (K.idx + o + N) % N, dx = T.px[j] - K.x, dy = T.py[j] - K.y, d = dx * dx + dy * dy;
+    if (d < bd) { bd = d; best = j; }
+  }
+  if (Math.sqrt(bd) < HW + 100 && best >= 0) {
+    var prev = K.idx;
+    if (prev > N - 45 && best < 45) {        // 출발선을 앞으로 지나감
+      if (K.gd >= RULE.GATES) { K.lap++; K.gd = 0; if (K.lap >= RULE.LAPS) finishKart(K, now); else if (K.i === G.me) { banner('🏁 ' + (K.lap + 1) + '바퀴째!', '', 1.4); beep('gate'); } }
+    }
+    var back = ((prev - best + N) % N);
+    if (back > 0 && back < N / 2 && K.sp > 20) K.ww += 0.03; else K.ww = Math.max(0, K.ww - 0.05);
+    K.idx = best;
+  }
+  var idxAdj = (K.gd > 0 || K.idx < N / 2) ? K.idx : K.idx - N;
+  K.pg = K.st === 'fin' ? RULE.LAPS * N + 1e6 : K.lap * N + idxAdj;
+  // 관문
+  if (K.st === 'race' && K.gd < RULE.GATES && K.lap < RULE.LAPS && now >= G.t0) {
+    var gi = T.gates[K.gd], rel = (K.idx - gi + 3 + N) % N;
+    if (rel <= 34) {
+      var d = (K.x - T.px[gi]) * (-T.ty[gi]) + (K.y - T.py[gi]) * T.tx[gi];
+      var lane = d < -HW / 3 ? 0 : d > HW / 3 ? 2 : 1;
+      enterGate(K, gi, lane + 1);
+    }
+  }
+}
+function enterGate(K, gi, tier) {
+  K.st = 'gate'; K.gt = tier; K.ga = Math.atan2(G.T.ty[gi], G.T.tx[gi]); K.sp *= 0.35;
+  if (K.i === G.me) { beep('gate'); openQ(tier); }
+  else if (K.bot) {
+    var b = K.bot, q = QD[G.deck[tier][(K.nq * 7 + K.i * 13) % G.deck[tier].length]], ty = q[3];
+    var tm = b.t[ty][tier] * rnd(0.7, 1.3), ok = Math.random() < b.acc - (tier - 1) * 0.07;
+    K.ai.think = tm + (ok ? OK_HOLD : WRONG_HOLD); K.ai.ans = ok; K.nq++;
+  }
+}
+function leaveGate(K, ok) {
+  var t = K.gt; K.gd++; K.st = 'race';
+  if (ok) {
+    K.ok++; K.pt += RULE.PT[t]; K.boost = TURBO[t]; K.bmul = 1.5;
+    if (!K.item && !K.roll && Math.random() < ITEM_P[t]) giveItem(K, t);
+    if (K.i === G.me) beep('boost');
+  }
+}
+function botGate(K, dt) { if (K.st === 'gate' && K.bot) { K.ai.think -= dt; if (K.ai.think <= 0) leaveGate(K, K.ai.ans); } }
+
+// ===== 아이템 =====
+function rollItem(place, n, tier) {
+  var bag;
+  if (n > 1 && place === 1) bag = [['honey', 40], ['shield', 35], ['turbo', 25]];
+  else if (n > 2 && place === n || n === 2 && place === 2) bag = [['star', 35], ['balloon', 35], ['turbo', 30]];
+  else bag = [['balloon', 35], ['turbo', 30], ['honey', 15], ['shield', 20]];
+  if (tier === 3 && place > 1) bag.forEach(function (b) { if (b[0] === 'balloon' || b[0] === 'star') b[1] += 15; });
+  var sum = bag.reduce(function (s, b) { return s + b[1]; }, 0), u = Math.random() * sum;
+  for (var i = 0; i < bag.length; i++) { u -= bag[i][1]; if (u <= 0) return bag[i][0]; }
+  return bag[0][0];
+}
+function giveItem(K, tier) {
+  var it = rollItem(K.place, G.n, tier);
+  if (K.i === G.me) { K.roll = 1.0; K.rollIt = it; beep('item'); setItemUI(); }
+  else { K.item = it; K.ai.itemT = rnd(1, 5); }
+}
+function useItem(K) {
+  if (!K.item || K.st === 'gate' && K.item !== 'shield') return;
+  var it = K.item; K.item = null;
+  if (it === 'turbo') { K.boost = 2.2; K.bmul = 1.6; if (K.i === G.me) beep('boost'); }
+  else if (it === 'star') { K.boost = 3.2; K.bmul = 1.75; K.inv = 3.2; if (K.i === G.me) beep('boost'); }
+  else if (it === 'shield') { K.shield = 12; if (K.i === G.me) beep('shield'); }
+  else if (it === 'balloon') {
+    var tg = -1; G.K.forEach(function (o) { if (o.place === K.place - 1 && o.st !== 'fin') tg = o.i; });
+    spawnBall(K.i, tg, K.x, K.y, K.a); emit({ t: 'b', tg: tg });
+    if (K.i === G.me) beep('throw');
+    feed(DOT[K.i] + ' ' + K.name + ' 💧 물풍선' + (tg >= 0 ? ' → ' + G.K[tg].name : ''));
+  } else if (it === 'honey') {
+    var hx = K.x - Math.cos(K.a) * 18, hy = K.y - Math.sin(K.a) * 18, k = (K.i * 100000 + (++G.hk)) % 999999;
+    spawnHoney(K.i, hx, hy, k); emit({ t: 'h', x: Math.round(hx), y: Math.round(hy), k: k });
+    if (K.i === G.me) beep('throw');
+  }
+  if (K.i === G.me) setItemUI();
+}
+function spawnBall(w, tg, x, y, a) { G.balls.push({ w: w, tg: tg, x: x + Math.cos(a) * 10, y: y + Math.sin(a) * 10, a: a, t: tg >= 0 ? 5 : 1.4 }); }
+function spawnHoney(w, x, y, k) { if (!G.honey.some(function (h) { return h.k === k; })) G.honey.push({ w: w, x: x, y: y, k: k, t: 30, age: 0 }); }
+function hitKart(K, kind, by) {
+  if (!K.local || K.st === 'gate' || K.st === 'fin') return;
+  if (K.inv > 0) return;
+  if (K.shield > 0) { K.shield = 0; if (K.i === G.me) { beep('shield'); feed('🫧 방패가 막았어요!'); } return; }
+  if (kind === 'b') { K.spin = 1.2; K.sp *= 0.3; for (var i = 0; i < 14; i++) part(K.x, K.y, '#5ac8ff', 0.5, rnd(-60, 60), rnd(-60, 60)); }
+  else if (kind === 'h') { K.slow = 1.6; K.sp *= 0.5; }
+  else if (kind === 'bump') { K.spin = 0.7; K.sp *= 0.4; }
+  if (K.i === G.me) { beep('hit'); feed(kind === 'b' ? '💧 물풍선에 맞았어요!' : kind === 'h' ? '🍯 꿀을 밟았어요!' : '🌟 별똥 차와 부딪쳤어요!'); }
+}
+function stepItems(dt) {
+  G.balls = G.balls.filter(function (b) {
+    b.t -= dt; if (b.t <= 0) return false;
+    var sp = 330, T = b.tg >= 0 ? G.K[b.tg] : null;
+    if (T) { var want = Math.atan2(T.y - b.y, T.x - b.x); b.a += clamp(angDiff(b.a, want), -7 * dt, 7 * dt); }
+    b.x += Math.cos(b.a) * sp * dt; b.y += Math.sin(b.a) * sp * dt;
+    for (var i = 0; i < G.K.length; i++) {
+      var K = G.K[i]; if (i === b.w || (T && i !== b.tg)) continue;
+      if (Math.hypot(K.x - b.x, K.y - b.y) < 10) { hitKart(K, 'b', b.w); for (var k = 0; k < 8; k++) part(b.x, b.y, '#9be0ff', 0.4, rnd(-50, 50), rnd(-50, 50)); return false; }
+    }
+    return true;
+  });
+  G.honey = G.honey.filter(function (h) {
+    h.t -= dt; h.age += dt; if (h.t <= 0) return false;
+    for (var i = 0; i < G.K.length; i++) {
+      var K = G.K[i]; if (!K.local || (i === h.w && h.age < 1) || K.st !== 'race') continue;
+      if (Math.hypot(K.x - h.x, K.y - h.y) < 10) {
+        if (K.inv > 0) continue;
+        hitKart(K, 'h', h.w);
+        if (G.net) emit({ t: 'x', k: h.k });
+        return false;
+      }
+    }
+    return true;
+  });
+}
+function bumps() {
+  var K = G.K;
+  for (var i = 0; i < K.length; i++) for (var j = 0; j < K.length; j++) {
+    if (i === j || !K[i].local) continue;
+    var a = K[i], b = K[j]; if (a.st === 'gate' || b.st === 'gate') continue;
+    var dx = a.x - b.x, dy = a.y - b.y, d = Math.hypot(dx, dy);
+    if (d < 12 && d > 0.01) {
+      var push = (12 - d) * (b.local ? 0.5 : 1); a.x += dx / d * push; a.y += dy / d * push; a.sp *= 0.97;
+      if (b.inv > 0 && a.inv <= 0 && a.spin <= 0) hitKart(a, 'bump', j);
+    }
+  }
+}
+function finishKart(K, now) {
+  if (K.st === 'fin') return;
+  K.st = 'fin'; K.ai.off = 0;
+  if (G.mode === 'cpu') { var r = rFinish(G.S, K.i, now, G.t0); if (K.i === G.me) finishMsg(r.place); }
+  else if (K.i === G.me) {
+    rFinish(G.S, K.i, now, G.t0);
+    emit({ t: 'f' }, function (ev) { if (ev && ev.r && ev.r.place) finishMsg(ev.r.place); });
+  }
+  feed('🏁 ' + DOT[K.i] + ' ' + K.name + ' 결승!');
+  for (var i = 0; i < 30; i++) part(K.x, K.y, COL[i % 5], 1.0, rnd(-80, 80), rnd(-80, 80));
+}
+function finishMsg(place) { beep('fin'); banner(place === 1 ? '🏆 1등!' : '🏁 ' + place + '등', '결승선을 통과했어요', 2.6); }
+
+// ===== 화면 =====
+var cv = $('#cv'), cx = cv.getContext('2d'), VW = 400, VH = 225, CAM = { x: 0, y: 0 };
+function resize() {
+  // 화면 비율 그대로, 짧은 쪽이 픽셀 약 210~225칸이 되게 해요(늘어나 보이지 않게).
+  var w = window.innerWidth || 800, h = window.innerHeight || 450, sc = Math.max(1, Math.min(w, h) / (Math.min(w, h) < 560 ? 210 : 225));
+  VW = Math.round(clamp(w / sc, 200, 520)); VH = Math.round(clamp(h / sc, 180, 520));
+  cv.width = VW; cv.height = VH; cx.imageSmoothingEnabled = false;
+}
+window.addEventListener('resize', function () { if (G) resize(); });
+function buildTags() {
+  var box = $('#tags'); box.innerHTML = '';
+  G.K.forEach(function (K) { var d = document.createElement('div'); d.className = 'tg' + (K.i === G.me ? ' me' : ''); d.style.setProperty('--c', K.col); d.textContent = K.i === G.me ? '나' : K.name; box.appendChild(d); K.tag = d; });
+}
+var bannerT = 0;
+function banner(txt, sub, sec) { var b = $('#banner'); b.innerHTML = esc(txt) + (sub ? '<small>' + esc(sub) + '</small>' : ''); b.classList.remove('hide'); bannerT = sec || 1.2; }
+function feed(msg) {
+  var f = $('#feed'), d = document.createElement('div'); d.textContent = msg; f.insertBefore(d, f.firstChild);
+  while (f.children.length > 4) f.removeChild(f.lastChild);
+  setTimeout(function () { if (d.parentNode) d.remove(); }, 4000);
+}
+function setItemUI() {
+  if (!G) return;
+  var K = G.K[G.me], b = $('#itemBtn'), ic = $('#itemIc');
+  if (K.roll > 0) { b.classList.remove('empty'); b.classList.add('spin'); return; }
+  b.classList.remove('spin');
+  if (K.item) { ic.textContent = ITEMS[K.item].e; b.classList.remove('empty'); b.title = ITEMS[K.item].n; }
+  else { ic.textContent = '🎁'; b.classList.add('empty'); b.title = '아이템 없음'; }
+}
+var STARPX = ['..#..', '.###.', '#####', '.###.', '.#.#.'];
+function draw(now) {
+  var T = G.T, me = G.K[G.me];
+  var lx = me.x + Math.cos(me.a) * 30, ly = me.y + Math.sin(me.a) * 22;
+  CAM.x += (lx - VW / 2 - CAM.x) * 0.15; CAM.y += (ly - VH / 2 - CAM.y) * 0.15;
+  CAM.x = clamp(CAM.x, 0, MW - VW); CAM.y = clamp(CAM.y, 0, MH - VH);
+  var ox = Math.round(CAM.x), oy = Math.round(CAM.y);
+  cx.drawImage(T.map, ox, oy, VW, VH, 0, 0, VW, VH);
+  // 관문(기둥 + 별 현수막)
+  var blink = Math.floor(now / 300) % 2;
+  T.gates.forEach(function (gi, g) {
+    var px = T.px[gi], py = T.py[gi], nx = -T.ty[gi], ny = T.tx[gi];
+    if (px < ox - 60 || py < oy - 60 || px > ox + VW + 60 || py > oy + VH + 60) return;
+    var mine = me.gd === g && me.st !== 'fin' && me.lap < RULE.LAPS;
+    var LC = ['#ffd640', '#ff9628', '#ff465a'];
+    for (var s = -HW - 3; s <= HW + 3; s++) {
+      var lane = s < -HW / 3 ? 0 : s > HW / 3 ? 2 : 1;
+      cx.fillStyle = Math.abs(Math.abs(s) - HW / 3) < 1 ? '#1a1a2a' : LC[lane];
+      cx.fillRect(Math.round(px + nx * s - ox) - 1, Math.round(py + ny * s - oy) - 7, 3, 4);
+    }
+    [-HW - 4, HW + 4].forEach(function (s) { cx.fillStyle = '#2a2a3a'; cx.fillRect(Math.round(px + nx * s - ox) - 2, Math.round(py + ny * s - oy) - 10, 4, 12); cx.fillStyle = '#ffffff'; cx.fillRect(Math.round(px + nx * s - ox) - 1, Math.round(py + ny * s - oy) - 10, 2, 2); });
+    for (var lane2 = 0; lane2 < 3; lane2++) for (var c = 0; c <= lane2; c++) {
+      var s2 = laneOff(lane2) + (c - lane2 / 2) * 6, sx = Math.round(px + nx * s2 - ox) - 2, sy = Math.round(py + ny * s2 - oy) - 7;
+      cx.fillStyle = '#ffffff'; for (var r = 0; r < 5; r++) for (var k = 0; k < 5; k++) if (STARPX[r][k] === '#') cx.fillRect(sx + k, sy + r - 1, 1, 1);
+    }
+    if (mine && blink) { cx.fillStyle = '#ffffff'; cx.fillRect(Math.round(px - ox) - 1, Math.round(py - oy) - 16, 3, 5); cx.fillRect(Math.round(px - ox) - 1, Math.round(py - oy) - 9, 3, 2); }
+  });
+  // 꿀 웅덩이
+  G.honey.forEach(function (h) {
+    var x = Math.round(h.x - ox), y = Math.round(h.y - oy);
+    cx.fillStyle = '#c98a10'; cx.fillRect(x - 6, y - 3, 12, 6); cx.fillRect(x - 4, y - 5, 8, 10);
+    cx.fillStyle = '#ffc93c'; cx.fillRect(x - 4, y - 2, 7, 4); cx.fillStyle = '#fff2b0'; cx.fillRect(x - 2, y - 2, 2, 1);
+  });
+  // 차(그림자 → 차 → 효과)
+  var order = G.K.slice().sort(function (a, b) { return a.y - b.y; });
+  order.forEach(function (K) {
+    var x = Math.round(K.x - ox), y = Math.round(K.y - oy);
+    if (x < -20 || y < -20 || x > VW + 20 || y > VH + 20) { if (K.tag) K.tag.style.display = 'none'; return; }
+    var spin = K.spin > 0 || (K.f & 1);
+    cx.globalAlpha = 0.3; cx.fillStyle = '#000'; cx.fillRect(x - 6, y - 3, 13, 9); cx.globalAlpha = 1;
+    var flick = (K.inv > 0 || (K.f & 16)) && Math.floor(now / 80) % 2;
+    cx.drawImage(kartSprite(K, K.a + (spin ? K.va || now / 60 : 0)), x - KS / 2, y - KS / 2 - 1);
+    if (flick) { cx.globalAlpha = 0.45; cx.fillStyle = '#fff6a0'; cx.fillRect(x - 8, y - 8, 16, 16); cx.globalAlpha = 1; }
+    if (K.shield > 0 || (K.f & 2)) { cx.strokeStyle = 'rgba(160,230,255,.9)'; cx.lineWidth = 1; cx.beginPath(); cx.arc(x + 0.5, y - 0.5, 11, 0, Math.PI * 2); cx.stroke(); cx.fillStyle = 'rgba(255,255,255,.9)'; cx.fillRect(x - 6, y - 8, 2, 2); }
+    if (K.slow > 0 || (K.f & 32)) { cx.fillStyle = '#ffc93c'; cx.fillRect(x - 7, y + 5, 3, 2); cx.fillRect(x + 4, y + 5, 3, 2); }
+    if (K.st === 'gate' || (K.f & 8)) { cx.fillStyle = '#fff'; cx.fillRect(x - 1, y - 16, 3, 5); cx.fillRect(x - 1, y - 9, 3, 2); }
+    if (K.tag) { K.tag.style.display = ''; K.tag.style.transform = 'translate(' + ((x / VW) * cv.clientWidth) + 'px,' + (((y - 12) / VH) * cv.clientHeight) + 'px) translate(-50%,-100%)'; }
+  });
+  // 물풍선
+  G.balls.forEach(function (b) { var x = Math.round(b.x - ox), y = Math.round(b.y - oy); cx.fillStyle = '#2b8bd9'; cx.fillRect(x - 3, y - 3, 6, 6); cx.fillStyle = '#7fd0ff'; cx.fillRect(x - 2, y - 2, 4, 4); cx.fillStyle = '#fff'; cx.fillRect(x - 1, y - 2, 1, 1); });
+  // 작은 점(불꽃·먼지·꽃가루)
+  G.parts.forEach(function (p) { cx.fillStyle = p.c; cx.fillRect(Math.round(p.x - ox), Math.round(p.y - oy), 2, 2); });
+  // 작은 지도
+  var mc = $('#mini').getContext('2d'); mc.clearRect(0, 0, 120, 92); mc.drawImage(T.mini, 0, 0);
+  G.K.forEach(function (K) { mc.fillStyle = K.col; var s = K.i === G.me ? 6 : 4; mc.fillRect(T.mox + K.x * T.msc - s / 2, T.moy + K.y * T.msc - s / 2, s, s); if (K.i === G.me) { mc.strokeStyle = '#fff'; mc.strokeRect(T.mox + K.x * T.msc - 4, T.moy + K.y * T.msc - 4, 8, 8); } });
+}
+
+// ===== 문제 창 =====
+function nextQ(tier) { var d = G.deck[tier], i = d[G.qp[tier] % d.length]; G.qp[tier]++; return i; }
+function openQ(tier) {
+  var qi = nextQ(tier), q = QD[qi];
+  G.q = { qi: qi, tier: tier, type: q[3], t: QSEC[q[3]][tier], max: QSEC[q[3]][tier], done: false, hold: 0, input: '' };
+  G.K[G.me].nq++;
+  $('#qp').classList.remove('hide');
+  $('#qTag').textContent = '⭐'.repeat(tier) + ' ' + ['', '쉬운 길', '보통 길', '도전 길'][tier];
+  $('#qLes').textContent = LNAME[q[1]];
+  $('#qText').textContent = q[4];
+  $('#qRes').classList.add('hide');
+  var opts = $('#qOpts'), num = $('#qNum');
+  if (q[3] === 0) {
+    num.classList.add('hide'); opts.classList.remove('hide');
+    opts.innerHTML = q[5].map(function (o, i) { return '<button data-i="' + i + '"><i>' + (i + 1) + '</i><span>' + esc(o) + '</span></button>'; }).join('');
+    opts.querySelectorAll('button').forEach(function (b) { b.onclick = function () { answer(+b.dataset.i); }; });
+  } else {
+    opts.classList.add('hide'); num.classList.remove('hide');
+    $('#qBox').textContent = '';
+  }
+  updQTime();
+}
+function updQTime() { var q = G.q; if (!q) return; $('#qBar').style.width = (q.t / q.max * 100) + '%'; $('#qBar').style.background = q.t < 6 ? '#ff4d6d' : '#9be564'; $('#qSec').textContent = Math.ceil(q.t) + '초'; }
+function normNum(s) { s = String(s).replace(/[,\s]/g, ''); if (!/^\d*\.?\d+$|^\d+\.$/.test(s)) return null; return Number(s); }
+function keyIn(k) {
+  var q = G && G.q; if (!q || q.done || q.type !== 1) return;
+  var s = q.input;
+  if (k === 'del') s = s.slice(0, -1);
+  else if (k === 'clr') s = '';
+  else if (k === '.') { if (s.indexOf('.') < 0 && s.length < 9) s = (s || '0') + '.'; }
+  else if (/^\d$/.test(k) && s.length < 9) s = (s === '0' ? '' : s) + k;
+  q.input = s; $('#qBox').textContent = s; beep('key');
+}
+function answer(v) {
+  var q = G.q; if (!q || q.done) return;
+  var Q = QD[q.qi], ok;
+  if (q.type === 0) { if (v == null) ok = false; else ok = v === Q[6]; }
+  else { if (v === 'submit') { var n = normNum(q.input); if (n === null) { toast('숫자를 입력해 주세요'); return; } ok = Math.abs(n - Number(Q[7])) < 1e-9; } else ok = false; }
+  q.done = true; q.ok = ok; q.hold = ok ? OK_HOLD : WRONG_HOLD;
+  var K = G.K[G.me];
+  if (q.type === 0) $('#qOpts').querySelectorAll('button').forEach(function (b) { var i = +b.dataset.i; b.disabled = true; if (i === Q[6]) b.classList.add('ok'); else if (i === v) b.classList.add('no'); });
+  var res = $('#qRes'); res.classList.remove('hide');
+  var right = q.type === 0 ? Q[5][Q[6]] : Q[7];
+  if (ok) { res.className = 'qres ok'; res.innerHTML = '✅ 정답! +' + RULE.PT[q.tier] + '점 · 🚀 터보 ' + TURBO[q.tier] + '초'; beep('ok'); }
+  else {
+    res.className = 'qres no'; beep('no');
+    res.innerHTML = (v == null && q.t <= 0 ? '⏰ 시간이 다 됐어요. ' : '❌ ') + '정답은 <b>' + esc(right) + '</b>' + (q.type === 1 && q.input ? ' (내 답: ' + esc(q.input) + ')' : '') + '<span class="e">' + esc(Q[8]) + '</span>';
+    G.wrongs.push({ q: Q[4], a: right, my: q.type === 0 ? (v == null ? '(시간 초과)' : Q[5][v]) : (q.input || '(시간 초과)'), e: Q[8], L: Q[1] });
+  }
+}
+function stepQ(dt) {
+  var q = G.q; if (!q) return;
+  if (!q.done) { q.t -= dt; if (q.t <= 0) { q.t = 0; answer(null); } updQTime(); return; }
+  q.hold -= dt;
+  if (q.hold <= 0) { G.q = null; $('#qp').classList.add('hide'); leaveGate(G.K[G.me], q.ok); }
+}
+
+// ===== 한 프레임 =====
+function placesNow() {
+  var prog = G.K.map(function (K) { return K.pg; }), rank = rRank(G.S, prog);
+  G.K.forEach(function (K, i) { K.place = rank[i]; });
+}
+function frame(ts) {
+  if (!G || G.over) return;
+  var dt = Math.min(0.05, (ts - G.last) / 1000); G.last = ts;
+  var now = sNow(), K0 = G.K[G.me];
+  if (G.net) netFrame(now);
+  if (now < G.t0) {
+    var c = Math.ceil((G.t0 - now) / 1000);
+    if (c !== G.cnt && c <= 3) { G.cnt = c; banner(String(c), c === 3 ? G.T.n : '', 1.1); beep('tick'); }
+    else if (c > 3 && G.cnt === 4) { G.cnt = 5; banner(G.T.n, '곧 출발해요', 1.8); }
+  } else {
+    if (G.cnt !== 0) { G.cnt = 0; banner('출발!', '', 1.0); beep('go'); }
+    G.K.forEach(function (K) { if (K.local) { stepKart(K, dt); botGate(K, dt); } });
+    bumps();
+    G.K.forEach(function (K) { if (K.local) track(K, now); });
+    stepItems(dt);
+    stepQ(dt);
+    if (K0.roll > 0) { K0.roll -= dt; if (K0.roll <= 0) { K0.roll = 0; K0.item = K0.rollIt; setItemUI(); feed('🎁 ' + ITEMS[K0.item].e + ' ' + ITEMS[K0.item].n + '을(를) 받았어요'); } }
+  }
+  G.parts = G.parts.filter(function (p) { p.t -= dt; p.x += p.vx * dt; p.y += p.vy * dt; return p.t > 0; });
+  placesNow();
+  // 머리 위 숫자판
+  $('#placeN').textContent = K0.place;
+  $('#lapN').textContent = Math.min(RULE.LAPS, K0.lap + 1);
+  var dots = ''; for (var g = 0; g < RULE.GATES; g++) dots += g < K0.gd || K0.st === 'fin' ? '●' : '○'; $('#gateDots').textContent = dots;
+  $('#scoreN').textContent = K0.pt;
+  $('#clock').textContent = now < G.t0 ? '0:00' : fmtT(now - G.t0);
+  $('#wrongway').classList.toggle('hide', !(K0.ww > 1 && K0.st === 'race'));
+  if (bannerT > 0) { bannerT -= dt; if (bannerT <= 0) $('#banner').classList.add('hide'); }
+  if (toastT > 0) { toastT -= dt; if (toastT <= 0) $('#toast').classList.add('hide'); }
+  draw(now);
+  // 끝?
+  var endAt = rEndAt(G.S, G.t0);
+  if (!G.endShown && rFirst(G.S) && !G.S.end && now < endAt && K0.st === 'fin') { G.endShown = true; }
+  if (now >= G.t0 && rFirst(G.S) && !G.S.end) { var left = endAt - now; if (left < 30000 && left > 0 && Math.floor(left / 1000) !== G.lastLeft) { G.lastLeft = Math.floor(left / 1000); if (G.lastLeft % 10 === 0 || G.lastLeft <= 5) feed('⏱️ ' + (G.lastLeft + 1) + '초 뒤 경주가 끝나요'); } }
+  if (G.S.end || now >= endAt) { endRace(); return; }
+  requestAnimationFrame(frame);
+}
+
+// ===== 조종 =====
+document.addEventListener('keydown', function (e) {
+  if (!G || $('#game').classList.contains('hide')) return;
+  var q = G.q;
+  if (q && !q.done) {
+    if (q.type === 0 && /^Digit[1-4]$|^Numpad[1-4]$/.test(e.code)) { answer(+e.code.slice(-1) - 1); e.preventDefault(); return; }
+    if (q.type === 1) {
+      if (/^[0-9]$/.test(e.key)) { keyIn(e.key); e.preventDefault(); return; }
+      if (e.key === '.' || e.key === 'Decimal') { keyIn('.'); e.preventDefault(); return; }
+      if (e.key === 'Backspace') { keyIn('del'); e.preventDefault(); return; }
+      if (e.key === 'Enter') { answer('submit'); e.preventDefault(); return; }
+    }
+  }
+  if (e.code === 'Space' || e.code === 'KeyX' || e.code === 'ShiftLeft') { if (!e.repeat) useMine(); e.preventDefault(); }
+  keys[e.code] = true;
+  if (/^Arrow/.test(e.code)) e.preventDefault();
+});
+document.addEventListener('keyup', function (e) { keys[e.code] = false; });
+window.addEventListener('blur', function () { keys = {}; padOff(); });
+function padOff() { Pad.l = Pad.r = Pad.b = 0; document.querySelectorAll('.tb').forEach(function (b) { b.classList.remove('on'); }); }
+function useMine() { if (!G || G.over || sNow() < G.t0) return; var K = G.K[G.me]; if (K.item) useItem(K); }
+document.querySelectorAll('.tb').forEach(function (b) {
+  var k = b.getAttribute('data-k');
+  function on(e) { e.preventDefault(); b.classList.add('on'); if (k === 'i') { useMine(); return; } Pad[k] = 1; try { b.setPointerCapture(e.pointerId); } catch (x) {} }
+  function off() { b.classList.remove('on'); if (k !== 'i') Pad[k] = 0; }
+  b.addEventListener('pointerdown', on);
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (t) { b.addEventListener(t, off); });
+  b.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+});
+$('#itemBtn').addEventListener('pointerdown', function (e) { e.preventDefault(); useMine(); });
+(function () {
+  var ks = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '.', 'del'];
+  $('#qKeys').innerHTML = ks.map(function (k) { return '<button data-k="' + k + '">' + (k === 'del' ? '⌫' : k) + '</button>'; }).join('');
+  $('#qKeys').querySelectorAll('button').forEach(function (b) { b.addEventListener('pointerdown', function (e) { e.preventDefault(); keyIn(b.dataset.k); }); });
+  $('#qOk').addEventListener('click', function () { answer('submit'); });
+})();
+$('#sndBtn').onclick = function () { Snd.on = !Snd.on; store.set('snd', Snd.on); this.textContent = Snd.on ? '🔊' : '🔇'; };
+$('#sndBtn').textContent = Snd.on ? '🔊' : '🔇';
+
+// ===== 온라인: 방 상태 주고받기 =====
+var Sync = null;
+function startSync(code, onRoom) {
+  stopSync();
+  Sync = { code: code, busy: false, stopped: false, fails: 0, onRoom: onRoom, timer: 0 };
+  syncTick();
+}
+function stopSync() { if (Sync) { Sync.stopped = true; clearTimeout(Sync.timer); } Sync = null; }
+function syncTick() {
+  var S = Sync; if (!S || S.stopped) return;
+  S.busy = true;
+  var t0 = Date.now();
+  Net.call('sync', { code: S.code, sid: SID, since: G && G.net ? G.lastG : 0 }).then(function (r) {
+    if (S.stopped) return;
+    S.fails = 0;
+    if (!r || !r.ok) { if (r && r.gone) { stopSync(); roomGone(r.msg); } return; }
+    if (r.now) { var rtt = Date.now() - t0, off = r.now + rtt / 2 - Date.now(); S.off = S.off == null ? off : S.off * 0.8 + off * 0.2; r.off = S.off; }
+    if (S.onRoom) S.onRoom(r);
+  }).catch(function () { S.fails++; }).then(function () {
+    S.busy = false;
+    if (!S.stopped) S.timer = setTimeout(syncTick, S.fails ? Math.min(6000, 1000 + S.fails * 1000) : (Net.syncMs || 400));
+  });
+}
+function roomGone(msg) {
+  if (G && !G.over && G.net) { G.over = true; toast(msg || '방이 없어졌어요.', 3); setTimeout(function () { G = null; show('home'); loadRank(); }, 1500); return; }
+  if (!$('#lobby').classList.contains('hide')) { lbWaiting(false); $('#lbMsg').textContent = msg || '방이 없어졌어요.'; LB.code = null; }
+}
+function emit(e, cb) {
+  if (!G || !G.net) { if (cb) cb(null); return; }
+  G.fid = Math.max(G.fid + 1, Date.now()); e.id = G.fid;
+  Net.call('shoot', { code: G.net.code, sid: SID, e: e }).then(function (r) {
+    if (r && r.ok && r.ev) { onFire(r.ev); if (cb) cb(r.ev); } else if (cb) cb(null);
+  }).catch(function () { if (cb) cb(null); });
+}
+function onFire(ev) {
+  if (!G || !ev || !ev.g) return;
+  G.seen = G.seen || {};
+  if (G.seen[ev.g]) return; G.seen[ev.g] = 1;
+  if (ev.g > G.lastG) G.lastG = ev.g;
+  var w = ev.w, K = G.K[w]; if (!K) return;
+  if (ev.t === 'f') { if (w !== G.me) feed('🏁 ' + DOT[w] + ' ' + K.name + ' 결승!' + (ev.r && ev.r.place ? ' (' + ev.r.place + '등)' : '')); return; }
+  if (ev.t === 'q') { feed('🚪 ' + K.name + ' 나감'); return; }
+  if (w === G.me) return;   // 내가 보낸 물풍선·꿀은 이미 화면에 있어요
+  if (ev.t === 'b') { spawnBall(w, ev.tg, K.x, K.y, K.a); feed(DOT[w] + ' ' + K.name + ' 💧 물풍선' + (ev.tg >= 0 && G.K[ev.tg] ? ' → ' + G.K[ev.tg].name : '')); }
+  else if (ev.t === 'h') spawnHoney(w, ev.x, ev.y, ev.k);
+  else if (ev.t === 'x') G.honey = G.honey.filter(function (h) { return h.k !== ev.k; });
+}
+function gameRoom(r) {
+  if (!G || !G.net) return;
+  if (r.off != null) G.off = r.off;
+  if (r.ps) G.S = r.ps;
+  (r.fires || []).forEach(onFire);
+}
+function flagsOf(K) { return (K.spin > 0 ? 1 : 0) | (K.shield > 0 ? 2 : 0) | (K.boost > 0 ? 4 : 0) | (K.st === 'gate' ? 8 : 0) | (K.inv > 0 ? 16 : 0) | (K.slow > 0 ? 32 : 0) | (K.st === 'fin' ? 64 : 0); }
+function netFrame(now) {
+  var me = G.K[G.me];
+  if (Net.pushState && now - G.pushAt > 100) {
+    G.pushAt = now;
+    Net.pushState(G.net.code, SID, { p: [[Math.round(me.x * 10), Math.round(me.y * 10), Math.round(me.a * 1000), Math.round(me.sp)]], f: flagsOf(me), pg: Math.round(me.pg), lap: me.lap, pt: me.pt, ok: me.ok });
+  }
+  var ps = Net.peers ? Net.peers(G.net.code) : null; if (!ps) return;
+  var rt = now - 140;
+  G.K.forEach(function (K, i) {
+    if (i === G.me) return;
+    var s = ps[i];
+    if (s && s.st && s.st !== K.lastSt && s.p && s.p[0]) {
+      K.lastSt = s.st; var p = s.p[0];
+      K.buf.push({ t: s.st, x: p[0] / 10, y: p[1] / 10, a: p[2] / 1000 }); if (K.buf.length > 12) K.buf.shift();
+      K.f = s.f | 0; K.pg = +s.pg || 0; K.lap = s.lap | 0; K.pt = s.pt | 0; K.ok = s.ok | 0;
+      K.st = K.f & 64 ? 'fin' : K.f & 8 ? 'gate' : 'race';
+    }
+    var b = K.buf; if (!b.length) return;
+    var A = b[0], B = b[b.length - 1];
+    for (var j = 0; j < b.length - 1; j++) if (b[j].t <= rt && b[j + 1].t >= rt) { A = b[j]; B = b[j + 1]; break; }
+    if (rt >= B.t) { K.x = B.x; K.y = B.y; K.a = B.a; }
+    else if (rt <= A.t) { K.x = A.x; K.y = A.y; K.a = A.a; }
+    else { var u = (rt - A.t) / Math.max(1, B.t - A.t); K.x = lerp(A.x, B.x, u); K.y = lerp(A.y, B.y, u); K.a = A.a + angDiff(A.a, B.a) * u; }
+    if (K.f & 1) K.va = now / 60;
+  });
+}
+
+// ===== 경주 끝 · 결과 =====
+function endRace() {
+  if (!G || G.over) return;
+  G.over = true;
+  var g0 = G;
+  if (g0.q) { $('#qp').classList.add('hide'); }
+  banner('🏁 경주 끝!', '', 2);
+  setTimeout(function () { showResult(g0); }, g0.net ? 1500 : 900);
+}
+function showResult(g0) {
+  var prog = g0.K.map(function (K) { return K.pg; }), rank = rRank(g0.S, prog), me = g0.K[g0.me];
+  var order = g0.K.map(function (K) { return K.i; }).sort(function (a, b) { return rank[a] - rank[b]; });
+  var myScore = rScore(g0.S, g0.me, rank[g0.me], me.pt);
+  $('#rsHead').textContent = rank[g0.me] === 1 ? '🏆 1등! 우승이에요!' : '🏁 ' + rank[g0.me] + '등으로 들어왔어요';
+  $('#rsSub').textContent = g0.T.n + ' · ' + g0.n + '명 경주 · 문제 ' + me.ok + '/' + me.nq + '개 정답 · 내 점수 ' + myScore + '점';
+  $('#rsTbl').innerHTML = '<tr><th>순위</th><th>이름</th><th>기록</th><th>📝 맞힌 문제</th><th>🏆 점수</th></tr>' + order.map(function (i) {
+    var K = g0.K[i], fin = g0.S.fin[i], rec = fin ? ((fin - g0.t0) / 1000).toFixed(1) + '초' : g0.S.q[i] ? '나감' : Math.min(RULE.LAPS, K.lap + 1) + '바퀴째';
+    return '<tr' + (i === g0.me ? ' class="me"' : '') + '><td>' + rank[i] + '</td><td class="nm">' + DOT[i] + ' ' + esc(K.name) + (i === g0.me ? ' (나)' : '') + '</td><td>' + rec + '</td><td>' + K.ok + (i === g0.me || !g0.net ? '/' + K.nq : '') + '</td><td>' + rScore(g0.S, i, rank[i], K.pt) + '</td></tr>';
+  }).join('');
+  $('#rsWrong').innerHTML = g0.wrongs.length ? g0.wrongs.map(function (w) {
+    return '<div class="w"><div>[' + esc(LNAME[w.L]) + '] ' + esc(w.q) + '</div><div class="a">정답: ' + esc(w.a) + ' · 내 답: ' + esc(w.my) + '</div><div class="e">' + esc(w.e) + '</div></div>';
+  }).join('') : '<div class="note">틀린 문제가 없어요. 멋져요! 🎉</div>';
+  show('result');
+  if (g0.net) saveNet(g0, false);
+  else {
+    $('#rsSaveCard').classList.add('hide');
+    var best = store.get('best', []); best.push({ n: me.name, s: myScore, r: rank[g0.me] + '/' + g0.n, d: new Date().toLocaleDateString('ko-KR') });
+    best.sort(function (a, b) { return b.s - a.s; }); store.set('best', best.slice(0, 10));
+  }
+  if (G === g0) G = null;
+}
+function saveNet(g0, quit) {
+  $('#rsSaveCard').classList.remove('hide'); $('#rsSave').textContent = '기록 저장 중…';
+  var me = g0.K[g0.me];
+  Net.call('saveResult', { code: g0.net.code, sid: SID, ok: me.ok, nq: me.nq, pt: me.pt, prog: me.pg, quit: quit ? 1 : 0 }).then(function (r) {
+    $('#rsSave').textContent = (r && r.ok ? '✅ ' : '❌ ') + (r && r.msg ? r.msg : ''); stopSync();
+  }).catch(function (e) { $('#rsSave').textContent = '❌ 기록하지 못했어요: ' + (e && e.message ? e.message : e); stopSync(); });
+}
+
+// ===== 첫 화면 =====
+function myName() { return cleanName($('#nm').value, 10); }
+function myCls() { return cleanCls($('#cl').value); }
+function needName() { if (!myName()) { $('#homeMsg').textContent = '이름을 먼저 써 주세요.'; $('#nm').focus(); return true; } return false; }
+function saveForm() { store.set('form', { nm: $('#nm').value, cl: $('#cl').value, lv: LV, tr: TR }); }
+function startCpu(k) {
+  if (needName()) return;
+  saveForm(); LAST = { mode: 'cpu', cpu: k };
+  var names = [myName()], pool = BOTNAME.slice();
+  for (var i = 0; i < k; i++) names.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  var seed = Math.floor(Math.random() * 2147483646) + 1;
+  startRace({ mode: 'cpu', names: names, me: 0, seed: seed, t0: Date.now() + RULE.LEAD, track: TR >= 0 ? TR : seed % TRACKS.length, lv: LV });
+}
+document.querySelectorAll('[data-cpu]').forEach(function (b) { b.onclick = function () { startCpu(+b.dataset.cpu); }; });
+function setSeg(sel, attr, v) { document.querySelectorAll(sel + ' button').forEach(function (b) { b.classList.toggle('on', +b.getAttribute(attr) === v); }); }
+document.querySelectorAll('#lvSeg button').forEach(function (b) { b.onclick = function () { LV = +b.dataset.lv; setSeg('#lvSeg', 'data-lv', LV); saveForm(); }; });
+document.querySelectorAll('#trSeg button').forEach(function (b) { b.onclick = function () { TR = +b.dataset.tr; setSeg('#trSeg', 'data-tr', TR); saveForm(); }; });
+var quitArm = 0;
+$('#quitBtn').onclick = function () {
+  if (!G) return;
+  if (Date.now() - quitArm > 3000) { quitArm = Date.now(); toast('한 번 더 누르면 경주를 그만둬요', 2.5); return; }
+  var g0 = G; g0.over = true; G = null;
+  if (g0.net) { g0.fid = Math.max(g0.fid + 1, Date.now()); Net.call('shoot', { code: g0.net.code, sid: SID, e: { t: 'q', id: g0.fid } }).catch(function () {}).then(function () { Net.call('saveResult', { code: g0.net.code, sid: SID, ok: g0.K[g0.me].ok, nq: g0.K[g0.me].nq, pt: g0.K[g0.me].pt, prog: g0.K[g0.me].pg, quit: 1 }).catch(function () {}); stopSync(); }); }
+  show('home'); loadRank();
+};
+$('#rsHome').onclick = function () { G = null; show('home'); loadRank(); };
+$('#rsAgain').onclick = function () { G = null; if (LAST.mode === 'net') openLobby(); else startCpu(LAST.cpu || 4); };
+['#nm', '#cl'].forEach(function (id) { $(id).addEventListener('change', function () { saveForm(); loadRank(); }); });
+function loadRank() {
+  var box = $('#rkHome');
+  if (!Net) {
+    $('#rkTitle').textContent = '내 최고 기록 (이 기기)';
+    var best = store.get('best', []);
+    box.innerHTML = best.length ? best.map(function (b, i) { return '<li><span class="n">' + (i + 1) + '</span><span class="s">' + esc(b.n) + ' · ' + esc(b.r) + '등</span><span class="c">' + b.s + '점 · ' + esc(b.d) + '</span></li>'; }).join('') : '<li><span class="n">-</span><span class="s">아직 기록이 없어요</span><span></span></li>';
+    return;
+  }
+  var cls = myCls(); $('#rkTitle').textContent = (cls ? cls + ' ' : '') + '순위 (1등 횟수)';
+  Net.call('getRanking', { cls: cls }).then(function (list) {
+    box.innerHTML = list && list.length ? list.map(function (r, i) { return '<li><span class="n">' + (i + 1) + '</span><span class="s">' + esc(r.name) + '</span><span class="c">🏆 ' + r.w + '번 · ' + r.g + '판 · 최고 ' + (r.best || 0) + '점</span></li>'; }).join('') : '<li><span class="n">-</span><span class="s">아직 기록이 없어요</span><span></span></li>';
+  }).catch(function (e) { box.innerHTML = '<li><span class="n">!</span><span class="s">순위를 못 불러왔어요</span><span class="c">' + esc(e && e.message ? e.message : e) + '</span></li>'; });
+}
+
+// ===== 대기실 =====
+var LB = { code: null, poll: 0 };
+$('#goNet').onclick = function () { if (!Net) return; if (needName()) return; if (!myCls()) { $('#homeMsg').textContent = '반 코드를 써 주세요(같은 반 친구와 같은 코드).'; $('#cl').focus(); return; } saveForm(); openLobby(); };
+function openLobby() {
+  LAST = { mode: 'net' };
+  show('lobby'); lbWaiting(false); $('#lbMsg').textContent = ''; LB.code = null;
+  $('#lbWho').textContent = myName() + ' · 반 코드 ' + myCls();
+  refreshRooms();
+  clearInterval(LB.poll); LB.poll = setInterval(function () { if (!$('#lobby').classList.contains('hide') && !LB.code) refreshRooms(); }, 3000);
+}
+function lbWaiting(on) { $('#lbWait').classList.toggle('hide', !on); ['#lbMatchCard', '#lbJoinCard'].forEach(function (id) { $(id).classList.toggle('hide', on); }); }
+function refreshRooms() {
+  Net.call('listRooms', { cls: myCls() }).then(function (list) {
+    var box = $('#lbRooms');
+    if (!list || !list.length) { box.innerHTML = '<div class="note">기다리는 방이 없어요. 🎲 빠른 매칭을 누르면 새 방이 생겨요.</div>'; return; }
+    box.innerHTML = list.map(function (r) { return '<button data-code="' + esc(r.c) + '">' + esc(r.n) + '의 방 · ' + r.k + '/5명 <span>' + esc(r.c) + '</span></button>'; }).join('');
+    box.querySelectorAll('button').forEach(function (b) { b.onclick = function () { lbEnter('joinRoom', { code: b.dataset.code }); }; });
+  }).catch(function (e) { $('#lbRooms').innerHTML = '<div class="note">방 목록을 못 불러왔어요: ' + esc(e && e.message ? e.message : e) + '</div>'; });
+}
+function lbEnter(fn, extra) {
+  var btns = document.querySelectorAll('#lobby .btn'); btns.forEach(function (b) { b.disabled = true; });
+  $('#lbMsg').textContent = '연결하는 중…';
+  var arg = { name: myName(), cls: myCls(), sid: SID }; for (var k in extra) arg[k] = extra[k];
+  Net.call(fn, arg).then(function (r) {
+    btns.forEach(function (b) { b.disabled = false; });
+    if (!r || !r.ok) { $('#lbMsg').textContent = '❌ ' + (r && r.msg ? r.msg : '들어가지 못했어요.'); return; }
+    $('#lbMsg').textContent = ''; enterWait(r.code);
+  }).catch(function (e) { btns.forEach(function (b) { b.disabled = false; }); $('#lbMsg').textContent = '❌ 서버에 연결하지 못했어요: ' + (e && e.message ? e.message : e); });
+}
+function enterWait(code) {
+  LB.code = code; lbWaiting(true); $('#lbCode').textContent = code;
+  startSync(code, function (s) {
+    if (s.st === 'play') {
+      if (G) return;
+      LB.code = null;
+      startRace({ mode: 'net', names: s.names, me: s.you, seed: s.seed, t0: s.startAt + s.lead, track: s.seed % TRACKS.length, lv: 1, net: { code: code }, off: s.off || 0 });
+      Sync.onRoom = gameRoom; gameRoom(s);
+      return;
+    }
+    var names = s.names || [];
+    var html = names.map(function (n, i) { return '<span class="pl" style="--c:' + COL[i] + '">' + DOT[i] + ' ' + esc(n) + (i === s.you ? ' (나)' : '') + (i === 0 ? ' 👑' : '') + '</span>'; }).join('');
+    for (var i = names.length; i < 5; i++) html += '<span class="pl empty">빈 자리</span>';
+    $('#lbPlayers').innerHTML = html;
+    $('#lbStart').classList.toggle('hide', !(s.you === 0 && names.length >= 2));
+    $('#lbWaitMsg').textContent = names.length < 2 ? '친구를 기다리는 중… 방 번호 ' + code + '를 알려 주세요.' : s.autoIn ? Math.ceil(s.autoIn / 1000) + '초 뒤 자동 출발 (5명이 모이면 바로 출발)' : '곧 출발해요';
+  });
+}
+$('#lbQuick').onclick = function () { lbEnter('quickMatch', {}); };
+$('#mkRoom').onclick = function () { lbEnter('createRoom', {}); };
+$('#lbJoin').onclick = function () { var c = $('#lbIn').value.replace(/\D/g, ''); if (c.length !== 4) { $('#lbMsg').textContent = '방 번호 4자리를 써 주세요.'; return; } lbEnter('joinRoom', { code: c }); };
+$('#lbStart').onclick = function () { if (!LB.code) return; Net.call('startRoom', { code: LB.code, sid: SID }).then(function (r) { if (r && !r.ok) $('#lbMsg').textContent = '❌ ' + r.msg; }); };
+$('#lbCancel').onclick = function () { var c = LB.code; stopSync(); LB.code = null; lbWaiting(false); if (c) Net.call('leaveRoom', { code: c, sid: SID }).catch(function () {}); refreshRooms(); };
+$('#lbBack').onclick = function () { var c = LB.code; stopSync(); LB.code = null; clearInterval(LB.poll); if (c) Net.call('leaveRoom', { code: c, sid: SID }).catch(function () {}); show('home'); loadRank(); };
+
+// ===== 처음 열 때 =====
+(function init() {
+  var f = store.get('form', {});
+  if (f.nm) $('#nm').value = f.nm; if (f.cl) $('#cl').value = f.cl;
+  if (f.lv != null) { LV = f.lv; setSeg('#lvSeg', 'data-lv', LV); }
+  if (f.tr != null) { TR = f.tr; setSeg('#trSeg', 'data-tr', TR); }
+  $('#qCount').textContent = QD.length;
+  if (/KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\//i.test(navigator.userAgent)) $('#inapp').classList.remove('hide');
+  if (!Net) { $('#goNet').disabled = true; $('#netSub').textContent = '이 화면(미리보기)에서는 컴퓨터와 연습만 돼요. 온라인 경주는 선생님이 올린 게임 주소에서 해요.'; }
+  else { var er = Net.error && Net.error(); if (er) { $('#nofb').classList.remove('hide'); $('#nofb').textContent = '⚠️ 온라인 경주 준비가 덜 됐어요: ' + er + ' (컴퓨터와 연습은 돼요)'; $('#goNet').disabled = true; } }
+  if (typeof teacherInit === 'function') teacherInit();
+  loadRank();
+  // 첫 화면 그림: 픽셀 차 셋이 달려요
+  var dc = $('#demo'), dx = dc.getContext('2d'), sprs = [0, 1, 2, 3].map(function (i) { return kartSprites(COL[i]); }), t0 = performance.now();
+  function demo(ts) {
+    if ($('#home').classList.contains('hide')) { requestAnimationFrame(demo); return; }
+    var t = (ts - t0) / 1000;
+    dx.fillStyle = '#4fa84f'; dx.fillRect(0, 0, 240, 96);
+    for (var i = 0; i < 240; i += 4) for (var j = 0; j < 96; j += 4) if (hash2(i, j, 3) % 7 === 0) { dx.fillStyle = '#5cb85c'; dx.fillRect(i, j, 2, 2); }
+    dx.fillStyle = '#f4f4f4'; dx.fillRect(0, 22, 240, 4); dx.fillRect(0, 70, 240, 4);
+    for (i = 0; i < 240; i += 16) { dx.fillStyle = '#ff5a5a'; dx.fillRect((i + Math.floor(t * 60)) % 256 - 8, 22, 8, 4); dx.fillRect((i + Math.floor(t * 60)) % 256 - 8, 70, 8, 4); }
+    dx.fillStyle = '#5b6070'; dx.fillRect(0, 26, 240, 44);
+    for (i = 0; i < 240; i += 20) { dx.fillStyle = '#f2f0d0'; dx.fillRect((i - Math.floor(t * 60) % 20 + 240) % 240, 47, 10, 2); }
+    var gx = 240 - ((t * 60) % 320) + 40;
+    var LC = ['#ffd640', '#ff9628', '#ff465a'];
+    for (var l = 0; l < 3; l++) { dx.fillStyle = LC[l]; dx.fillRect(gx, 26 + l * 15, 4, 14); }
+    dx.fillStyle = '#2a2a3a'; dx.fillRect(gx, 20, 4, 4); dx.fillRect(gx, 70, 4, 6);
+    sprs.forEach(function (s, i) { var x = 30 + i * 48 + Math.sin(t * 1.3 + i * 1.7) * 14, y = 32 + ((i * 11) % 30), a = Math.sin(t * 2 + i) * 0.15; var k = Math.round((a + Math.PI * 2) / (Math.PI * 2) * KDIR) % KDIR; dx.drawImage(s[k], Math.round(x), Math.round(y)); });
+    requestAnimationFrame(demo);
+  }
+  requestAnimationFrame(demo);
+})();
+</script>
+
+</body>
+</html>

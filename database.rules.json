@@ -1,0 +1,7 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "snow": { ".read": true, ".write": true }
+  }
+}
