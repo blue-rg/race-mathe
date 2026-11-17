@@ -112,6 +112,30 @@ details[open] { display: flex; flex-direction: column; gap: 8px; }
 #feed { position: absolute; top: 108px; right: max(8px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 4px; align-items: flex-end; pointer-events: none; max-width: 60%; }
 #feed div { background: rgba(10,12,28,.8); border-radius: 8px; padding: 3px 10px; font-size: 14px; }
 #banner { position: absolute; left: 50%; top: 32%; transform: translate(-50%, -50%); font-family: var(--font-disp); font-size: 72px; color: var(--hi); text-shadow: 0 5px 0 #6a2c00, 0 0 24px rgba(0,0,0,.6); pointer-events: none; text-align: center; white-space: nowrap; }
+#posPop { position: absolute; left: 50%; top: 46%; margin-left: -50px; width: 100px; text-align: center; font-family: var(--font-disp); font-size: 26px; pointer-events: none; opacity: 0; text-shadow: 0 2px 0 #000; }
+#posPop.up { color: var(--lime); } #posPop.down { color: #ff8a8a; }
+#posPop.go { animation: pospop 1.4s ease-out forwards; }
+@keyframes pospop { 0% { opacity: 0; transform: translateY(8px) scale(.7); } 15% { opacity: 1; transform: translateY(0) scale(1.15); } 30% { transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-6px); } }
+@media (prefers-reduced-motion: reduce) { #posPop.go { animation-duration: .01s; } }
+.badges { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; }
+.coin { float: right; color: var(--hi); font-size: 18px; }
+.parts { display: flex; flex-direction: column; gap: 8px; }
+.pt { display: grid; grid-template-columns: 34px 1fr auto; gap: 8px; align-items: center; background: var(--bg); border: 2px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+.pt .i { font-size: 24px; text-align: center; } .pt b { color: var(--hi); font-weight: normal; font-size: 16px; } .pt small { display: block; font-size: 13px; opacity: .9; line-height: 1.35; }
+.pt .pip { letter-spacing: 2px; color: var(--hi); font-size: 13px; margin-left: 4px; }
+.pt button { min-height: 44px; min-width: 92px; border-radius: 10px; border: 2px solid var(--hi); background: #3a2a10; color: var(--hi); cursor: pointer; font-size: 14px; padding: 0 8px; }
+.pt button:disabled { border-color: var(--line); background: transparent; color: var(--ink); opacity: .6; cursor: default; }
+.coinline { text-align: center; font-size: 18px; color: var(--hi); line-height: 1.5; }
+.bd { display: flex; gap: 10px; align-items: center; background: #3a2a10; border: 2px solid var(--hi); border-radius: 10px; padding: 8px 10px; }
+.bd .i { font-size: 26px; } .bd .t { display: flex; flex-direction: column; } .bd b { color: var(--hi); font-size: 16px; } .bd small { font-size: 13px; opacity: .9; line-height: 1.35; }
+.bd.off { background: var(--bg); border-color: var(--line); } .bd.off .i { filter: grayscale(1); opacity: .5; } .bd.off b { color: var(--ink); opacity: .6; }
+#liveRank { position: absolute; left: max(8px, env(safe-area-inset-left, 0px)); top: 60px; display: flex; flex-direction: column; gap: 3px; pointer-events: none; z-index: 2; }
+#liveRank .lr { display: flex; align-items: center; gap: 6px; min-width: 132px; max-width: 190px; background: rgba(10,12,28,.78); border-left: 5px solid var(--c); border-radius: 8px; padding: 3px 8px; font-size: 14px; line-height: 1.3; }
+#liveRank .lr b { font-family: var(--font-disp); font-weight: normal; color: var(--hi); width: 14px; text-align: center; }
+#liveRank .lr .n { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#liveRank .lr small { color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; }
+#liveRank .lr.me { background: rgba(58,42,16,.92); outline: 2px solid var(--hi); }
+@media (max-width: 560px), (max-height: 520px) { #liveRank .lr { min-width: 0; max-width: 128px; font-size: 12px; padding: 2px 6px; gap: 4px; } #liveRank .lr small { font-size: 11px; } }
 #banner small { display: block; font-family: var(--font-ui); font-size: 20px; color: #fff; text-shadow: 0 2px 0 #000; }
 #wrongway { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); background: var(--red); padding: 6px 16px; border-radius: 10px; font-size: 20px; pointer-events: none; }
 .itembox { position: absolute; right: max(12px, env(safe-area-inset-right, 0px)); bottom: max(108px, calc(env(safe-area-inset-bottom, 0px) + 108px)); width: 74px; height: 74px; border-radius: 14px; border: 3px solid var(--hi); background: rgba(10,12,28,.8); color: #fff; font-size: 38px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
@@ -162,7 +186,7 @@ details[open] { display: flex; flex-direction: column; gap: 8px; }
   <div class="logo">
     <div class="eb">6-2 · 4단원 비례식과 비례배분 · 단원 복습 레이스</div>
     <h1>픽셀 <span>비례 랠리</span></h1>
-    <div class="sub">문제 관문에서 ⭐·⭐⭐·⭐⭐⭐ 길을 골라 들어가 문제를 맞히면 🚀 터보와 🎁 아이템! 친구 4명과 함께 3바퀴를 먼저 도는 사람이 이겨요.</div>
+    <div class="sub">문제 관문을 지나면 ⭐·⭐⭐·⭐⭐⭐ 중 무작위 난이도 문제! 맞히면 🚀 터보와 🎁 아이템! 친구 4명과 함께 3바퀴를 먼저 도는 사람이 이겨요.</div>
     <canvas id="demo" width="240" height="96" aria-hidden="true"></canvas>
   </div>
   <div id="inapp" class="warn hide">카카오톡·네이버 같은 앱 안에서 열렸어요. 경주 연결이 안 될 수 있으니 오른쪽 위 메뉴에서 <b>다른 브라우저로 열기</b>를 눌러 주세요.</div>
@@ -172,23 +196,40 @@ details[open] { display: flex; flex-direction: column; gap: 8px; }
       <div><label for="nm">이름</label><input type="text" id="nm" maxlength="10" autocomplete="off" placeholder="예: 김하늘"></div>
       <div><label for="cl">반 코드</label><input type="text" id="cl" maxlength="20" autocomplete="off" placeholder="예: 옥정초604"></div>
     </div>
+    <div class="note">⚙️ 내 카트 기어비 (앞 톱니 : 뒤 톱니)</div>
+    <div class="seg" id="gearSeg"><button data-g="0">3 : 2</button><button data-g="1" class="on">1 : 1</button><button data-g="2">2 : 3</button></div>
+    <div class="note" id="gearInfo"></div>
     <button class="btn" id="goNet">🏁 친구와 온라인 경주<small id="netSub">각자 기기에서 2~5명 동시 출발</small></button>
     <div class="note">🤖 컴퓨터와 연습 · 컴퓨터 실력</div>
     <div class="seg" id="lvSeg"><button data-lv="0">🙂 쉬움</button><button data-lv="1" class="on">😎 보통</button><button data-lv="2">🔥 어려움</button></div>
     <div class="note">트랙</div>
-    <div class="seg four" id="trSeg"><button data-tr="-1" class="on">🎲 무작위</button><button data-tr="0">🌸 벚꽃</button><button data-tr="1">🏜️ 사막</button><button data-tr="2">❄️ 눈꽃</button></div>
+    <div class="seg" id="trSeg"><button data-tr="-1" class="on">🎲 무작위</button><button data-tr="0">🌸 벚꽃 공원</button><button data-tr="1">🏜️ 모래 협곡</button><button data-tr="2">❄️ 눈꽃 8자</button><button data-tr="3">🌋 용암 지그재그</button><button data-tr="4">⚓ 바닷가 항구</button></div>
     <div class="cpurow"><button class="btn blue" data-cpu="1">🤖 1명과</button><button class="btn blue" data-cpu="2">🤖 2명과</button><button class="btn blue" data-cpu="4">🤖 4명과</button></div>
     <div id="homeMsg" class="note" role="status"></div>
+  </div>
+  <div class="card" id="shop">
+    <h2>🛠️ 정비소 <span class="coin" id="shCoin">🪙 0</span></h2>
+    <div class="note" id="shNote"></div>
+    <div class="parts" id="shParts"></div>
+    <div class="note" id="shMsg" role="status"></div>
   </div>
   <div class="card">
     <h2>게임 방법</h2>
     <ul class="rules">
       <li>한 판에 <b>2~5명</b>이 <b>3바퀴</b>를 달려요. 바퀴마다 <b>문제 관문 4곳</b>이 있어요. 관문에 닿으면 차가 멈추고 문제가 나와요.</li>
-      <li>관문 앞 길이 세 갈래로 칠해져 있어요. 왼쪽 <b>⭐ 쉬운 길</b> · 가운데 <b>⭐⭐ 보통 길</b> · 오른쪽 <b>⭐⭐⭐ 도전 길</b>. 들어간 길의 문제가 나와요.</li>
-      <li>맞히면 문제 점수(⭐10 · ⭐⭐20 · ⭐⭐⭐30)와 <b>🚀 터보</b>(⭐ 1.4초 · ⭐⭐ 2.2초 · ⭐⭐⭐ 3초), 그리고 <b>🎁 아이템</b>(⭐은 60% 확률)을 받아요. 틀리면 정답과 풀이를 3.5초 동안 보고 출발해요.</li>
+      <li>관문(❓ 보라색 바닥)에 닿으면 <b>🎲 ⭐ 쉬운 · ⭐⭐ 보통 · ⭐⭐⭐ 도전 문제 중 하나가 무작위</b>로 나와요(각각 1/3). 어디로 들어가도 같아요.</li>
+      <li><b>어려운 문제일수록 혜택이 커요.</b> 맞히면 — ⭐ 10점 · 🚀 터보 1초 · 🎁 아이템 35%(기본 아이템만) / ⭐⭐ <b>25점</b> · <b>🚀 파워 부스터 4초</b>(1.8배 속도) · 🎁 아이템 꼭 / ⭐⭐⭐ <b>45점</b> · <b>🔥 슈퍼 부스터 7초</b>(2.2배 속도) · 🎁 <b>좋은 아이템</b>(이미 있으면 하나 더 쌓아 둬요). 부스터는 <b>직접 운전</b>하지만 핸들이 길을 따라가도록 살짝 도와주고, 길 밖에서도 느려지지 않고, 공격도 안 맞아요. 부스터가 남은 채 다음 관문에 닿으면 <b>남은 시간은 그 관문을 지난 뒤 이어서</b> 써요(손해 없음). 어려운 문제는 푸는 데 시간이 더 걸리는 만큼 보상으로 시간을 되찾아요. 틀리면 정답과 풀이를 3.5초 동안 본 뒤 <b>같은 관문에서 다른 문제</b>를 또 풀어요. 맞혀야 관문이 열려요(3번 틀리면 그다음은 ⭐ 쉬운 문제가 나오고, 혜택은 맞힌 문제의 난이도 기준).</li>
       <li><b>문장제는 답을 직접 입력</b>해요. <b>단위는 쓰지 않고 숫자만</b> 써요(예: 12 kg → <b>12</b>). 나머지는 4개 중에서 골라요.</li>
       <li>아이템 — 🚀 터보 로켓 · 💧 물풍선(바로 앞 친구를 빙글빙글) · 🍯 꿀 웅덩이(뒤에 놓으면 밟은 차가 느려져요) · 🫧 비눗방울 방패(공격 한 번 막기) · 🌟 별똥 질주(뒤쪽 순위만, 빠르고 무적). 뒤에 있을수록 좋은 아이템이 잘 나와요.</li>
-      <li>길 밖(잔디·모래·눈)은 느려요. 길 위의 <b>⚡ 화살표 판</b>을 밟으면 빨라져요.</li>
+      <li>트랙 5곳은 모양과 장치가 모두 달라요. 🌸 넓은 길과 머리핀 커브·연못 / 🏜️ 좁아지는 협곡과 모래 웅덩이(느려짐)·바위 / ❄️ 가운데서 엇갈리는 8자 길과 미끄러운 빙판 / 🌋 지그재그 길과 용암(빠지면 1초 만에 다시 출발) / ⚓ 긴 직선과 바다 위 좁은 다리.</li>
+      <li><b>⚡ 번개 출발</b> — 관문 문제를 <b>제한 시간의 절반 안에</b> 맞히면(시간 막대가 노란색일 때) 터보·부스터가 ⭐ 0.5초 · ⭐⭐ 1초 · ⭐⭐⭐ 1.5초 더 길어져요. 틀리면 보너스가 없으니 정확하게!</li>
+      <li><b>🛠️ 정비소</b> — 경주가 끝나면 <b>최종 점수만큼 🪙 코인</b>을 받아요. 첫 화면 정비소에서 코인으로 부품을 사서 다음 판에 써요(부품마다 3단계, 150 · 300 · 500코인). 🔧 엔진 최고 속도 +1.5%씩 · 🛞 타이어 연석·모래·길 밖 감속 15%씩 줄이기 · 🔋 부스터 배터리 ⭐⭐·⭐⭐⭐ 부스터 +0.5초씩 · ⚡ 번개 칩 번개 출발 시간 50% → 55·60·65%. 부품은 조금만 도와줘요. <b>문제를 하나 더 맞히는 것이 부품을 다 산 것보다 더 빨라요.</b></li>
+      <li><b>🏅 칭호</b> — 경주가 끝나면 순위와 상관없이 정답왕·번개 계산·지름길 열쇠·아이템 활용·역전의 명수 같은 칭호 8개에 도전해요.</li>
+      <li><b>⚙️ 기어비</b> — 출발 전에 고르는 앞 톱니 : 뒤 톱니의 비예요. <b>3 : 2</b>(비율 1.5)는 최고 속도가 빠르지만 출발·코너가 느리고, <b>2 : 3</b>(비율 약 0.67)은 그 반대예요. 트랙에 맞는 비를 골라 보세요.</li>
+      <li><b>🔑 비례식 열쇠 지름길</b> — 트랙마다 지름길이 하나 있어요. 갈림길 앞 길 한쪽의 <b>노란 열쇠 판</b>을 밟으면 비례식 □ 문제가 나오고, 푸는 동안 <b>차가 저절로 지름길로 달려요</b>(멈추지 않아요). <b>10초 안에 맞히면</b> 지름길 끝의 문이 열리고 <b>+10점 · 🚀 터보 2.4초</b>! 틀리면 그 바퀴는 원래 길로 달려요. 열쇠 판을 안 밟고 원래 길로 가도 관문 문제는 그대로 풀 수 있어요.</li>
+      <li><b>🚀 따라잡기</b> — 가장 앞선 친구와 <b>반 바퀴 넘게</b> 벌어지면 관문 문제를 맞혔을 때 터보 시간과 아이템 확률이 <b>1.5배</b>가 돼요(점수는 그대로).</li>
+      <li>길 밖(잔디·모래·눈)은 느려요. <b>길 밖에 5초 넘게 있으면</b> 마지막으로 문제를 푼 관문에서 다시 출발해요(2초부터 알려 줘요). 길 위의 <b>⚡ 화살표 판</b>을 밟으면 빨라져요.</li>
+      <li>경주하는 동안 <b>화면 왼쪽</b>에 모두의 실시간 순위와 몇 바퀴째인지 보여요(📝 문제 푸는 중 · 🏁 도착).</li>
       <li>1등이 들어오면 <b>30초 뒤</b> 경주가 끝나요. 점수 = 순위 점수(1~5등 100·70·50·35·25) + 문제 점수.</li>
       <li>조종 — 컴퓨터: <b>←·→</b>(A·D) 방향, <b>↓</b>(S) 브레이크, <b>스페이스</b> 아이템, 문제는 <b>1~4</b> 또는 숫자 입력 후 <b>Enter</b>. 태블릿·휴대폰: 왼쪽 아래 <b>◀ ▶</b>, 오른쪽 아래 <b>🎁</b>·<b>▼</b>. 차는 저절로 앞으로 가요.</li>
     </ul>
@@ -206,7 +247,7 @@ details[open] { display: flex; flex-direction: column; gap: 8px; }
       <label for="tCls">반 코드 <span class="note">(비우면 전체)</span></label>
       <input type="text" id="tCls" maxlength="20" autocomplete="off">
       <button class="btn blue" id="tBtn3" data-what="csv">📥 경주 기록 내려받기 (엑셀용 CSV)</button>
-      <button class="btn ghost" id="tBtn" data-what="rec">경주 기록 초기화</button>
+      <button class="btn ghost" id="tBtn" data-what="rec">경주 기록 초기화 (🪙 코인·부품도 함께)</button>
       <button class="btn ghost" id="tBtn4" data-what="room">지난 게임 방 정리 (수업이 끝난 뒤)</button>
       <div id="tMsg" class="note">초기화하기 전에 지울 내용이 CSV 파일로 먼저 내려받아져요. 기록은 파이어베이스 콘솔(Realtime Database의 snow → kart 아래)에서도 볼 수 있어요.</div>
     </details>
@@ -254,6 +295,8 @@ details[open] { display: flex; flex-direction: column; gap: 8px; }
     <canvas id="mini" width="120" height="92"></canvas>
     <div id="feed"></div>
     <div id="banner"></div>
+    <div id="posPop" aria-hidden="true"></div>
+    <div id="liveRank" aria-label="실시간 순위"></div>
     <div id="wrongway" class="hide">↩ 거꾸로 가고 있어요!</div>
     <button id="itemBtn" class="itembox" aria-label="아이템 쓰기"><span id="itemIc"></span><small>스페이스</small></button>
     <div class="tpad" id="padL"><button class="tb" data-k="l" aria-label="왼쪽">◀</button><button class="tb" data-k="r" aria-label="오른쪽">▶</button></div>
@@ -276,6 +319,8 @@ details[open] { display: flex; flex-direction: column; gap: 8px; }
   <div class="big" id="rsHead">🏁 경주 끝!</div>
   <div class="note" id="rsSub" style="text-align:center"></div>
   <div class="card tblwrap"><table class="tbl" id="rsTbl"></table></div>
+  <div class="card"><h2 id="rsBadgeH">🏅 내가 받은 칭호</h2><div class="badges" id="rsBadge"></div></div>
+  <div class="card hide" id="rsCoinCard"><div class="coinline" id="rsCoin"></div></div>
   <div class="card hide" id="rsSaveCard"><div class="note" id="rsSave" role="status"></div></div>
   <div class="card">
     <h2>틀린 문제 다시 보기</h2>
@@ -295,7 +340,7 @@ var QD = [[1,1,3,1,"국기를 그리려고 합니다. 가로와 세로의 비가
 // 한 판 = 3바퀴 경주. 바퀴마다 '문제 관문' 4곳에서 멈춰 문제를 풀어요(⭐·⭐⭐·⭐⭐⭐ 길 중 골라 들어가기).
 // 1등이 들어오면 30초 뒤 끝나요(모두 들어오면 바로). 아무도 못 들어와도 10분이 지나면 끝나요.
 // 점수 = 순위 점수(1~5등: 100·70·50·35·25) + 문제 점수(⭐10 · ⭐⭐20 · ⭐⭐⭐30). 순위는 들어온 차례, 못 들어온 사람은 달린 거리로 정해요.
-var RULE = { LEAD: 5000, LAPS: 3, GATES: 4, DUR: 600000, AFTER: 30000, PLACE: [100, 70, 50, 35, 25], PT: [0, 10, 20, 30] };
+var RULE = { LEAD: 5000, LAPS: 3, GATES: 4, DUR: 600000, AFTER: 30000, PLACE: [100, 70, 50, 35, 25], PT: [0, 10, 25, 45] };
 function rNew(n, seed) {
   var S = { n: n, v: 0, fin: [], q: [], end: 0 };
   for (var i = 0; i < n; i++) { S.fin.push(0); S.q.push(0); }
@@ -626,12 +671,33 @@ var FBNet = (function () {
               return D.push('records/' + key(cls), row).then(function () {
                 return D.txn('rank/' + key(cls) + '/' + key(name), function (r) { r = r || { name: name, cls: cls, w: 0, g: 0, best: 0 }; r.g++; if (res === '1등') r.w++; r.best = Math.max(r.best || 0, score); return r; }, true);
               }).then(function () {
-                var out = { ok: true, msg: '기록을 저장했어요! (' + res + ' · ' + score + '점)' };
+                return D.txn('garage/' + key(cls) + '/' + key(name), function (g) { g = g || { name: name, c: 0, lv: [0, 0, 0, 0], earn: 0 }; g.c = (+g.c || 0) + score; g.earn = (+g.earn || 0) + score; return g; }, true);
+              }).then(function (gt) {
+                var out = { ok: true, msg: '기록을 저장했어요! (' + res + ' · ' + score + '점)', coin: score, coins: gt && gt.val ? gt.val.c : score };
                 return D.set('res/' + code + '/' + sid, out).then(function () { return out; });
               });
             });
           });
         });
+      });
+    },
+    getGarage: function (p) {
+      var cls = cls_(p.cls), name = clean(p.name, 10);
+      if (!cls || !name) return Promise.resolve({ c: 0, lv: [0, 0, 0, 0] });
+      return db().get('garage/' + key(cls) + '/' + key(name)).then(function (g) { return g || { c: 0, lv: [0, 0, 0, 0] }; });
+    },
+    buyPart: function (p) {
+      var cls = cls_(p.cls), name = clean(p.name, 10), i = int_(p.p, 0, 3), why = '';
+      if (!cls || !name) return Promise.resolve({ ok: false, msg: '이름과 반 코드를 써 주세요.' });
+      return db().txn('garage/' + key(cls) + '/' + key(name), function (g) {
+        why = ''; var lv = arr(g.lv); for (var k = 0; k < 4; k++) lv[k] = +lv[k] || 0; g.lv = lv;
+        if (lv[i] >= PART_MAX) { why = '이미 최고 단계예요.'; return undefined; }
+        if ((+g.c || 0) < PART_COST[lv[i]]) { why = '코인이 모자라요.'; return undefined; }
+        g.c = (+g.c || 0) - PART_COST[lv[i]]; lv[i]++; why = ''; return g;
+      }, false).then(function (r) {   // 처음엔 빈 값으로 불릴 수 있어서 빈 값이면 그대로 두고, 서버 값으로 다시 불려요
+        if (!r.val) return { ok: false, msg: '코인이 모자라요.', g: { c: 0, lv: [0, 0, 0, 0] } };
+        var g = r.val;
+        return r.committed && !why ? { ok: true, msg: PARTS[i].n + ' ' + arr(g.lv)[i] + '단계! ' + PARTS[i].u(arr(g.lv)[i]), g: g } : { ok: false, msg: why || '다시 눌러 주세요.', g: g };
       });
     },
     getRanking: function (cls) {
@@ -657,7 +723,7 @@ var FBNet = (function () {
         var fname = '픽셀비례랠리기록_' + (cls || '전체') + '_' + today() + '.csv';
         download(fname, csv);
         if (what === 'csv') return { ok: true, msg: rows.length + '줄을 ' + fname + '로 내려받았어요.' };
-        return Promise.all([D.remove(cls ? 'records/' + key(cls) : 'records'), D.remove(cls ? 'rank/' + key(cls) : 'rank')]).then(function () {
+        return Promise.all([D.remove(cls ? 'records/' + key(cls) : 'records'), D.remove(cls ? 'rank/' + key(cls) : 'rank'), D.remove(cls ? 'garage/' + key(cls) : 'garage')]).then(function () {
           return { ok: true, msg: (cls ? '반 코드 ' + cls : '전체') + ' 기록 ' + rows.length + '개를 지웠어요. 지우기 전 내용은 ' + fname + '로 내려받았어요.' };
         });
       });
@@ -721,8 +787,30 @@ var COL = ['#ff4d5e', '#3d8bff', '#2ecc71', '#ffc93c', '#b06bff'];
 var DOT = ['🔴', '🔵', '🟢', '🟡', '🟣'];
 var LNAME = { 1: '비의 성질', 2: '간단한 자연수의 비', 3: '비례식', 4: '비례식의 성질', 5: '비례식 활용', 6: '비례배분', 7: '단원 마무리' };
 var QSEC = [[0, 20, 25, 30], [0, 40, 50, 60]];          // 제한 시간(초): [고르기, 숫자 입력][단계]
-var TURBO = [0, 1.4, 2.2, 3.0], ITEM_P = [0, 0.6, 1, 1];  // 맞히면 터보(초) · 아이템 받을 확률
+// 어려운 문제일수록 혜택이 커요(난이도는 관문마다 무작위): ⭐ 터보, ⭐⭐ 파워 부스터, ⭐⭐⭐ 슈퍼 부스터 + 아이템
+// ⭐ 터보 1초 · ⭐⭐ 파워 부스터 4초(×1.8) · ⭐⭐⭐ 슈퍼 부스터 7초(×2.2). 직접 운전하되 핸들 보조·길 밖 감속 없음·공격 막기
+// 🛠️ 정비소 부품: 경주가 끝나면 최종 점수만큼 🪙 코인을 받고, 코인으로 부품 단계를 올려요(부품마다 0~3단계).
+// 밸런스: 효과를 작게(다 사도 한 판에 몇 초) 정하고, 두 부품은 어려운 문제·빨리 맞히기를 해야만 효과가 나요.
+var PARTS = [
+  { e: '🔧', n: '엔진', u: function (l) { return '최고 속도 +' + (l * 1.5) + '%'; } },
+  { e: '🛞', n: '타이어', u: function (l) { return '연석·모래·길 밖에서 덜 느려짐 ' + (l * 15) + '%'; } },
+  { e: '🔋', n: '부스터 배터리', u: function (l) { return '⭐⭐·⭐⭐⭐ 부스터 +' + (l * 0.5) + '초'; } },
+  { e: '⚡', n: '번개 칩', u: function (l) { return '번개 출발 시간 ' + (50 + l * 5) + '% (기본 50%)'; } }];
+var PART_COST = [150, 300, 500], PART_MAX = 3;
+var GARAGE = { c: 0, lv: [0, 0, 0, 0] };
+function fastWin(K) { return 0.5 + 0.05 * ((K && K.pl && K.pl[3]) || 0); }
+var TURBO = [0, 1.0, 4.0, 7.0], TMUL = [0, 1.35, 1.8, 2.2], ITEM_P = [0, 0.35, 1, 1];
+var OFF_LIMIT = 5, OFF_WARN = 2;                         // 길 밖 5초 → 직전 관문에서 다시 출발(2초부터 알려 줘요)
 var OK_HOLD = 0.9, WRONG_HOLD = 3.5;                     // 맞힘 표시 · 틀리면 풀이 보는 시간(초)
+var RETRY_EASY = 3;                                      // 틀리면 같은 관문에서 다른 문제를 또 풀어요. 3번 틀리면 그다음부터는 ⭐ 문제로
+// 기어비(앞 톱니 : 뒤 톱니): 비가 클수록 최고 속도는 빠르고, 출발·코너는 느려요
+var GEARS = [
+  { n: '3 : 2', top: 1.08, acc: 0.8, turn: 0.95, d: '앞 톱니바퀴가 한 바퀴 돌 때 뒷바퀴는 1.5바퀴(3 ÷ 2 = 1.5) → 최고 속도 ↑ · 출발·코너 ↓ (긴 직선 트랙에 유리)' },
+  { n: '1 : 1', top: 1, acc: 1, turn: 1, d: '앞 톱니바퀴가 한 바퀴 돌 때 뒷바퀴도 1바퀴(1 ÷ 1 = 1) → 모든 성능이 보통' },
+  { n: '2 : 3', top: 0.93, acc: 1.5, turn: 1.1, d: '앞 톱니바퀴가 한 바퀴 돌 때 뒷바퀴는 약 0.67바퀴(2 ÷ 3) → 출발·코너 ↑ · 최고 속도 ↓ (굽은 트랙에 유리)' }];
+var SC_HW = 20, DOOR_SEC = 10, DOOR_PT = 10;             // 지름길 반폭 · 열쇠 문제 제한 시간(초) · 맞히면 점수
+var FAST_BONUS = [0, 0.5, 1, 1.5];                       // 번개 출발: 제한 시간의 절반 안에 맞히면 터보·부스터 시간 + (난이도별)
+var CATCH = 1.5;                                         // 1등과 반 바퀴 넘게 벌어지면 관문 혜택(터보·아이템 확률) ×1.5
 var MAXSP = 150, ACC = 1.25, TURN = 2.75, HW = 34;       // 최고 속도(px/초) · 가속 · 회전 · 길 반폭
 var OFF = 0.55, CURB = 0.9;
 var ITEMS = {
@@ -774,16 +862,45 @@ function beep(kind) {
 }
 
 // ===== 트랙 (세 곳 모두 이 게임용으로 새로 그린 모양) =====
-var MW = 1500, MH = 1150, STEP = 4;
+// 트랙 크기 배율: 아래 좌표는 1500×1150 기준으로 그렸고, 실제 지도는 TSC배로 키워요(길 폭은 그대로 → 한 바퀴가 더 길어져요)
+var TSC = 1.5, MW = Math.round(1500 * TSC), MH = Math.round(1150 * TSC), STEP = 4;
+// 트랙마다 모양·길 폭·장치가 달라요. w: [위치(0~1), 길 반폭] 꺾은선 · ice 빙판 · sand 모래 웅덩이 · rock 길 위 바위 [위치, 옆, 크기] · pool 물/용암 웅덩이(길 밖) [x, y, 반지름]
+function lemni(cx, cy, ax, ay, n) { var o = []; for (var k = 0; k < n; k++) { var t = k / n * Math.PI * 2, s = Math.sin(t), c = Math.cos(t), q = 1 + s * s; o.push([cx + ax * c / q, cy + ay * s * c / q * 2]); } return o; }
 var TRACKS = [
-  { n: '🌸 벚꽃 공원', k: 'spring', pts: [[300, 250], [700, 180], [1100, 230], [1310, 450], [1180, 660], [900, 610], [760, 790], [960, 950], [700, 1030], [350, 970], [190, 700], [250, 450]],
+  { n: '🌸 벚꽃 공원', sub: '넓은 길 · 머리핀 커브 · 가운데 연못', k: 'spring',
+    pts: [[300, 250], [700, 180], [1100, 230], [1310, 450], [1180, 660], [900, 610], [760, 790], [960, 950], [700, 1030], [350, 970], [190, 700], [250, 450]],
+    gat: [0.15, 0.30, 0.66, 0.85], sc: { a: 0.40, b: 0.60, via: [[1060, 830]] },
+    w: [[0, 42], [0.5, 42], [0.62, 30], [0.72, 30], [0.8, 42]], pool: [[560, 600, 150, 'water'], [1000, 420, 90, 'water']], rock: [], ice: [], sand: [],
     pal: { g: ['#5cb85c', '#52ab52', '#67c267', '#4b9f4b'], r: ['#5b6070', '#555a69', '#60657a'], ca: '#ff5a5a', cb: '#f4f4f4', ln: '#f2f0d0', off: 'g' } },
-  { n: '🏜️ 모래 협곡', k: 'desert', pts: [[250, 300], [620, 190], [930, 330], [1260, 210], [1360, 520], [1100, 700], [1260, 960], [860, 1010], [620, 800], [360, 960], [170, 700]],
+  { n: '🏜️ 모래 협곡', sub: '좁았다 넓어지는 협곡 길 · 모래 웅덩이 · 굴러온 바위', k: 'desert',
+    pts: [[250, 300], [620, 190], [930, 330], [1260, 210], [1360, 520], [1100, 700], [1260, 960], [860, 1010], [620, 800], [360, 960], [170, 700]],
+    gat: [0.14, 0.55, 0.70, 0.86], sc: { a: 0.20, b: 0.46, via: [] },
+    w: [[0, 34], [0.08, 34], [0.12, 22], [0.15, 34], [0.22, 34], [0.27, 46], [0.35, 34], [0.45, 34], [0.5, 22], [0.56, 34], [0.66, 34], [0.7, 22], [0.78, 34]],
+    pool: [], rock: [[0.25, -14, 8], [0.29, 16, 9], [0.48, 0, 7], [0.92, 12, 8]], ice: [], sand: [[0.06, 10, 16], [0.31, -10, 18], [0.53, -6, 14], [0.75, 8, 18], [0.88, -12, 16]],
     pal: { g: ['#e8c27a', '#ddb56c', '#f0cd88', '#d4a960'], r: ['#7a6a5a', '#726252', '#82725f'], ca: '#ff8a3d', cb: '#fff3d6', ln: '#fff0b8', off: 's' } },
-  { n: '❄️ 눈꽃 마을', k: 'snow', pts: [[300, 190], [1180, 190], [1320, 400], [930, 520], [1270, 720], [1190, 960], [320, 970], [190, 760], [620, 600], [200, 420]],
-    pal: { g: ['#eef5ff', '#e2ebf8', '#f7fbff', '#d6e2f2'], r: ['#6a7488', '#626c80', '#717b90'], ca: '#3d8bff', cb: '#ffffff', ln: '#ffe680', off: 'w' } }
+  { n: '❄️ 눈꽃 8자 고개', sub: '8자로 엇갈리는 길(가운데에서 부딪쳐요!) · 미끄러운 빙판', k: 'snow',
+    pts: lemni(750, 575, 600, 430, 18), gat: [0.10, 0.20, 0.80, 0.90], sc: { a: 0.31, b: 0.69, via: [[430, 575]] },
+    w: [[0, 34]], pool: [], rock: [], sand: [], ice: [[0.09, 0, 26], [0.3, -8, 22], [0.44, 10, 20], [0.58, 0, 26], [0.8, -10, 22], [0.94, 6, 20]],
+    pal: { g: ['#eef5ff', '#e2ebf8', '#f7fbff', '#d6e2f2'], r: ['#6a7488', '#626c80', '#717b90'], ca: '#3d8bff', cb: '#ffffff', ln: '#ffe680', off: 'w' } },
+  { n: '🌋 용암 지그재그', sub: '세 번 꺾이는 지그재그 길 · 길 사이 용암(빠지면 바로 다시 출발) · 바위', k: 'lava',
+    pts: [[200, 170], [760, 150], [1320, 190], [1340, 360], [800, 380], [420, 420], [430, 560], [900, 560], [1330, 600], [1330, 780], [800, 800], [430, 830], [440, 980], [200, 990], [160, 600]],
+    gat: [0.12, 0.28, 0.56, 0.80], sc: { a: 0.32, b: 0.505, via: [] },
+    w: [[0, 36], [1, 36]], pool: [[900, 270, 70, 'lava'], [600, 270, 60, 'lava'], [1100, 480, 60, 'lava'], [700, 470, 55, 'lava'], [900, 690, 70, 'lava'], [600, 690, 60, 'lava'], [300, 760, 60, 'lava']],
+    rock: [[0.13, 14, 8], [0.36, -14, 8], [0.57, 14, 8], [0.78, -12, 8]], ice: [], sand: [],
+    pal: { g: ['#3b2a26', '#452f2a', '#33231f', '#4f3530'], r: ['#2c2c35', '#26262e', '#34343e'], ca: '#ff5a1f', cb: '#2a2a2a', ln: '#ffb02e', off: 'l' } },
+  { n: '⚓ 바닷가 항구', sub: '아주 긴 직선 · 바다 위 좁은 다리 · 부두 바위', k: 'harbor',
+    pts: [[200, 230], [700, 200], [1250, 220], [1370, 420], [1150, 560], [900, 560], [700, 640], [560, 820], [760, 950], [1150, 915], [1340, 970], [1270, 1075], [900, 1090], [300, 1050], [160, 700]],
+    gat: [0.14, 0.27, 0.70, 0.85], sc: { a: 0.31, b: 0.565, via: [] },
+    w: [[0, 40], [0.2, 40], [0.3, 40], [0.36, 22], [0.44, 22], [0.5, 36], [0.85, 36], [0.9, 40]],
+    pool: [[1000, 400, 150, 'water'], [1120, 780, 120, 'water'], [400, 560, 150, 'water'], [700, 380, 90, 'water']], rock: [[0.55, -12, 7], [0.67, 14, 7], [0.95, 0, 7]], ice: [], sand: [],
+    pal: { g: ['#8acb6e', '#7dbe62', '#96d47a', '#6fae58'], r: ['#5e5a55', '#57534e', '#66615b'], ca: '#ffffff', cb: '#2b6fd6', ln: '#ffffff', off: 'g' } }
 ];
-var GATE_AT = [0.17, 0.39, 0.61, 0.83], PAD_AT = [0.07, 0.28, 0.5, 0.72, 0.93];
+TRACKS.forEach(function (D) {
+  D.pts = D.pts.map(function (p) { return [p[0] * TSC, p[1] * TSC]; });
+  if (D.sc) D.sc.via = (D.sc.via || []).map(function (p) { return [p[0] * TSC, p[1] * TSC]; });
+  D.pool = (D.pool || []).map(function (pl) { return [pl[0] * TSC, pl[1] * TSC, pl[2] * TSC, pl[3]]; });
+});
+var GATE_AT = [0.17, 0.39, 0.61, 0.83], PAD_AT = [0.07, 0.28, 0.5, 0.72, 0.93], HWMAX = 48;
 
 function catmull(P, step) {
   var raw = [], n = P.length, i, k;
@@ -820,14 +937,19 @@ var DECO = {
   rock: ['..rrrr..', '.rRRRrr.', 'rRRRRRrr', 'rRRrRRRr', '.rrrrrr.'],
   snowman: ['...www...', '..wkwkw..', '..wwoww..', '...www...', '.wwwwwww.', 'wwwwkwwww', 'wwwwwwwww', 'wwwwkwwww', '.wwwwwww.'],
   flower: ['.p.', 'pyp', '.p.'],
-  bush: ['.gGGg.', 'gGhGGg', 'gGGGhg', '.gggg.']
+  bush: ['.gGGg.', 'gGhGGg', 'gGGGhg', '.gggg.'],
+  crystal: ['..c..', '.cCc.', '.cCc.', 'cCCCc', 'cCcCc', '.ccc.'],
+  palm: ['g..gg..g', '.gGGGGg.', 'gGg..gGg', 'g..tt..g', '...tt...', '...tt...', '...tt...', '..tttt..'],
+  crate: ['bbbbbb', 'bBBBBb', 'bBbbBb', 'bBbbBb', 'bBBBBb', 'bbbbbb']
 };
 var DECO_PAL = {
   spring: { tree: { g: '#e86aa0', G: '#ff9cc6', h: '#ffd1e4', t: '#7a4a2a', T: '#5a3218' }, bush: { g: '#2f8a3e', G: '#46b05a', h: '#7ad48a' }, flower: { p: '#fff', y: '#ffd23f' }, rock: { r: '#6d7280', R: '#9aa0ad' } },
   desert: { cactus: { g: '#2f7a3e', G: '#4caf50', t: '#b07a3a' }, rock: { r: '#8a5a3a', R: '#c08050' }, bush: { g: '#7a8a3a', G: '#a0b050', h: '#c8d870' }, flower: { p: '#ff6a3d', y: '#ffd23f' } },
+  lava: { crystal: { c: '#ff7a2f', C: '#ffd06b' }, rock: { r: '#1f1a1a', R: '#4a3f3c' }, bush: { g: '#5a2a1a', G: '#7a3a22', h: '#a04a2a' } },
+  harbor: { palm: { g: '#2f8a3e', G: '#46b05a', t: '#8a5a2b' }, crate: { b: '#7a4a1e', B: '#c98d4f' }, rock: { r: '#6d7280', R: '#9aa0ad' }, flower: { p: '#fff', y: '#ff6a3d' } },
   snow: { pine: { g: '#1f5a3a', G: '#2f7a4e', w: '#ffffff', t: '#6a4a2a' }, snowman: { w: '#ffffff', k: '#2a2a3a', o: '#ff8a3d' }, rock: { r: '#7a8496', R: '#b6c0d2' }, bush: { g: '#c9d6ea', G: '#ffffff', h: '#e9f0fa' } }
 };
-var DECO_SET = { spring: [['tree', 5, 6], ['bush', 3, 3], ['flower', 0, 0], ['flower', 0, 0], ['rock', 3, 2]], desert: [['cactus', 4, 5], ['rock', 3, 2], ['rock', 3, 2], ['bush', 3, 3], ['flower', 0, 0]], snow: [['pine', 5, 6], ['snowman', 4, 4], ['bush', 3, 3], ['rock', 3, 2]] };
+var DECO_SET = { spring: [['tree', 5, 6], ['bush', 3, 3], ['flower', 0, 0], ['flower', 0, 0], ['rock', 3, 2]], desert: [['cactus', 4, 5], ['rock', 3, 2], ['rock', 3, 2], ['bush', 3, 3], ['flower', 0, 0]], snow: [['pine', 5, 6], ['snowman', 4, 4], ['bush', 3, 3], ['rock', 3, 2]], lava: [['crystal', 3, 3], ['rock', 3, 2], ['rock', 3, 2], ['bush', 3, 3]], harbor: [['palm', 4, 5], ['crate', 4, 3], ['rock', 3, 2], ['flower', 0, 0]] };
 
 function buildTrack(ti) {
   var D = TRACKS[ti], P = catmull(D.pts, STEP), N = P.length, T = { i: ti, n: D.n, k: D.k, pal: D.pal, N: N, px: [], py: [], tx: [], ty: [], ob: [] };
@@ -835,27 +957,83 @@ function buildTrack(ti) {
     var a = P[(i - 2 + N) % N], b = P[(i + 2) % N], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1;
     T.px.push(P[i][0]); T.py.push(P[i][1]); T.tx.push(dx / l); T.ty.push(dy / l);
   }
-  T.gates = GATE_AT.map(function (f) { return Math.floor(f * N); });
+  // 다른 구간(8자 교차로 등)과 가까운 점이면 관문·판을 조금 뒤로 옮겨요
+  function crowded(j) { for (var q = 0; q < N; q += 2) { var gap = Math.min(Math.abs(q - j), N - Math.abs(q - j)); if (gap > 50 && Math.hypot(T.px[q] - T.px[j], T.py[q] - T.py[j]) < 130) return true; } return false; }
+  function spot(f) { var j = Math.floor(f * N); for (var k = 0; k < 60 && crowded(j); k++) j = (j + 4) % N; return j; }
+  T.gates = (D.gat || GATE_AT).map(spot);
+  // 길 반폭: 꺾은선 → 관문 앞·출발선은 HW로 맞추고 부드럽게
+  var W = D.w, hw = [];
+  for (i = 0; i < N; i++) { var f = i / N, v = W[W.length - 1][1]; for (var k = 0; k < W.length; k++) { var nx = W[k + 1] || [1, W[0][1]]; if (f >= W[k][0] && f <= nx[0]) { v = lerp(W[k][1], nx[1], (f - W[k][0]) / Math.max(1e-6, nx[0] - W[k][0])); break; } } hw.push(v); }
+  T.gates.concat([0]).forEach(function (gi) { for (var o = -34; o <= 10; o++) hw[(gi + o + N) % N] = HW; });
+  for (var pass = 0; pass < 3; pass++) { var h2 = hw.slice(); for (i = 0; i < N; i++) { var sm = 0; for (var o2 = -6; o2 <= 6; o2++) sm += h2[(i + o2 + N) % N]; hw[i] = sm / 13; } }
+  T.gates.concat([0]).forEach(function (gi) { for (var o = -26; o <= 4; o++) hw[(gi + o + N) % N] = HW; });
+  T.hw = hw;
+  // 비례식 열쇠 지름길: 본 길의 a 지점 → (경유점) → b 지점. 문(door)을 맞힌 차만 지나가요
+  T.sc = null;
+  if (D.sc) {
+    var ia = Math.floor(D.sc.a * N), ib = Math.floor(D.sc.b * N), wp = [[T.px[ia], T.py[ia]]].concat(D.sc.via || []).concat([[T.px[ib], T.py[ib]]]), sp = [];
+    for (var w0 = 0; w0 < wp.length - 1; w0++) { var L0 = Math.hypot(wp[w0 + 1][0] - wp[w0][0], wp[w0 + 1][1] - wp[w0][1]), ns = Math.max(1, Math.round(L0 / STEP)); for (var u = 0; u < ns; u++) sp.push([lerp(wp[w0][0], wp[w0 + 1][0], u / ns), lerp(wp[w0][1], wp[w0 + 1][1], u / ns)]); }
+    sp.push(wp[wp.length - 1]);
+    for (var ps = 0; ps < 4; ps++) { var c2 = sp.map(function (p0) { return p0.slice(); }); for (var q0 = 1; q0 < sp.length - 1; q0++) { var sx = 0, sy = 0, cn = 0; for (var o3 = -6; o3 <= 6; o3++) { var qq = clamp(q0 + o3, 0, sp.length - 1); sx += c2[qq][0]; sy += c2[qq][1]; cn++; } sp[q0] = [sx / cn, sy / cn]; } }
+    var S = { a: ia, b: ib, n: sp.length, px: [], py: [], tx: [], ty: [] };
+    for (q0 = 0; q0 < sp.length; q0++) { var pa = sp[Math.max(0, q0 - 2)], pb = sp[Math.min(sp.length - 1, q0 + 2)], dx3 = pb[0] - pa[0], dy3 = pb[1] - pa[1], l3 = Math.hypot(dx3, dy3) || 1; S.px.push(sp[q0][0]); S.py.push(sp[q0][1]); S.tx.push(dx3 / l3); S.ty.push(dy3 / l3); }
+    // 입구(ent): 본 길에서 확실히 벗어난 첫 자리 → 여기서 문제가 나와요 · 문(door): 끝에서 본 길과 만나기 직전 자리
+    var clr = function (k) { var m = 1e9; for (var q5 = 0; q5 < N; q5 += 2) { var d6 = Math.hypot(T.px[q5] - S.px[k], T.py[q5] - S.py[k]) - hw[q5]; if (d6 < m) m = d6; } return m - SC_HW; };
+    var ent = 0; while (ent < S.n - 1 && clr(ent) < 12) ent++;
+    var dk = S.n - 1; while (dk > ent && clr(dk) < 12) dk--;
+    S.ent = ent; S.door = Math.max(ent + 8, dk);
+    S.sg = ((S.px[ent] - T.px[ia]) * (-T.ty[ia]) + (S.py[ent] - T.py[ia]) * T.tx[ia]) > 0 ? 1 : -1; S.side = S.sg > 0 ? '오른쪽' : '왼쪽';
+    // 열쇠 판: 갈림길 앞(직전 관문 뒤) 지름길 쪽 길 절반. 밟으면 달리면서 문제를 풀어요
+    var pg0 = -1; T.gates.forEach(function (g) { if (g < ia && g > pg0) pg0 = g; });
+    S.pad = Math.max(pg0 >= 0 ? pg0 + 18 : 12, ia - 90);
+    T.sc = S;
+  }
   var rr = mulberry(1234 + ti);
-  T.pads = PAD_AT.map(function (f) { var j = Math.floor(f * N); return { i: j, d: Math.round((rr() - 0.5) * HW), x: 0, y: 0 }; });
+  T.pads = PAD_AT.map(function (f) { var j = spot(f); return { i: j, d: Math.round((rr() - 0.5) * hw[j]), x: 0, y: 0 }; });
   T.pads.forEach(function (p) { p.x = T.px[p.i] - T.ty[p.i] * p.d; p.y = T.py[p.i] + T.tx[p.i] * p.d; });
   // 길 모양(가면) → 땅 종류: 2 길 · 1 연석 · 0 길 밖
   var m = document.createElement('canvas'); m.width = MW; m.height = MH;
   var c = m.getContext('2d'); c.fillStyle = '#000'; c.fillRect(0, 0, MW, MH); c.lineJoin = c.lineCap = 'round';
-  c.beginPath(); for (i = 0; i <= N; i++) { var q = i % N; if (i) c.lineTo(T.px[q], T.py[q]); else c.moveTo(T.px[q], T.py[q]); } c.closePath();
-  c.strokeStyle = 'rgb(128,0,0)'; c.lineWidth = (HW + 6) * 2; c.stroke();
-  c.strokeStyle = 'rgb(255,0,0)'; c.lineWidth = HW * 2; c.stroke();
-  var md = c.getImageData(0, 0, MW, MH).data, surf = new Uint8Array(MW * MH);
+  function scDisc(r) { if (T.sc) for (var q1 = 0; q1 < T.sc.n; q1++) { c.beginPath(); c.arc(T.sc.px[q1], T.sc.py[q1], r, 0, 7); c.fill(); } }
+  c.fillStyle = 'rgb(128,0,0)'; for (i = 0; i < N; i++) { c.beginPath(); c.arc(T.px[i], T.py[i], hw[i] + 6, 0, 7); c.fill(); } scDisc(SC_HW + 6);
+  c.fillStyle = 'rgb(255,0,0)'; for (i = 0; i < N; i++) { c.beginPath(); c.arc(T.px[i], T.py[i], hw[i], 0, 7); c.fill(); } scDisc(SC_HW);
+  var md = c.getImageData(0, 0, MW, MH).data, surf = new Uint8Array(MW * MH), zone = new Uint8Array(MW * MH);
   for (i = 0; i < MW * MH; i++) { var v = md[i * 4]; surf[i] = v > 200 ? 2 : v > 70 ? 1 : 0; }
-  T.surf = surf;
+  // 물·용암 웅덩이(길 밖, 길과 겹치지 않게 반지름을 줄여요) → 땅 종류 3
+  function roadDist(px, py) { var m2 = 1e9; for (var q = 0; q < N; q += 2) { var dd = Math.hypot(T.px[q] - px, T.py[q] - py) - hw[q]; if (dd < m2) m2 = dd; } return m2; }
+  T.pools = [];
+  (D.pool || []).forEach(function (pl) {
+    var r = Math.min(pl[2], roadDist(pl[0], pl[1]) - 22); if (r < 25) return;
+    T.pools.push({ x: pl[0], y: pl[1], r: r, t: pl[3] });
+    for (var yy = Math.max(0, pl[1] - r - 6 | 0); yy < Math.min(MH, pl[1] + r + 6); yy++) for (var xq = Math.max(0, pl[0] - r - 6 | 0); xq < Math.min(MW, pl[0] + r + 6); xq++) {
+      var wob = Math.sin(xq * 0.09) * 4 + Math.cos(yy * 0.11) * 4;
+      if (Math.hypot(xq - pl[0], yy - pl[1]) < r + wob && surf[yy * MW + xq] === 0) { surf[yy * MW + xq] = 3; zone[yy * MW + xq] = pl[3] === 'lava' ? 4 : 3; }
+    }
+  });
+  // 길 위 빙판(1)·모래 웅덩이(2)·바위(장애물)
+  function onRoad(list, cb) { (list || []).forEach(function (h) { var j = Math.floor(h[0] * N) % N; cb(T.px[j] - T.ty[j] * h[1], T.py[j] + T.tx[j] * h[1], h[2], j); }); }
+  function blob(cx0, cy0, r, val) { for (var yy = Math.max(0, cy0 - r * 1.6 | 0); yy < Math.min(MH, cy0 + r * 1.6); yy++) for (var xq = Math.max(0, cx0 - r * 1.6 | 0); xq < Math.min(MW, cx0 + r * 1.6); xq++) { var wob = Math.sin((xq + yy) * 0.3) * 2; if (Math.hypot((xq - cx0) / 1.5, yy - cy0) < r * 0.8 + wob && surf[yy * MW + xq] === 2) zone[yy * MW + xq] = val; } }
+  onRoad(D.ice, function (x0, y0, r) { blob(x0, y0, r, 1); });
+  onRoad(D.sand, function (x0, y0, r) { blob(x0, y0, r, 2); });
+  T.rocks = []; onRoad(D.rock, function (x0, y0, r) { T.rocks.push({ x: x0, y: y0, r: r }); T.ob.push({ x: x0, y: y0, r: r }); });
+  // 지름길 바닥(5): 본 길과 겹치지 않는 부분만 따로 칠해요(항구는 나무 다리)
+  if (T.sc) { var S1 = T.sc; for (var q4 = 0; q4 < S1.n; q4++) {
+    if (Math.hypot(S1.px[q4] - T.px[S1.a], S1.py[q4] - T.py[S1.a]) < hw[S1.a] + 2 || Math.hypot(S1.px[q4] - T.px[S1.b], S1.py[q4] - T.py[S1.b]) < hw[S1.b] + 2) continue;
+    for (var yy4 = (S1.py[q4] - SC_HW) | 0; yy4 <= S1.py[q4] + SC_HW; yy4++) for (var xx4 = (S1.px[q4] - SC_HW) | 0; xx4 <= S1.px[q4] + SC_HW; xx4++) {
+      if (xx4 < 0 || yy4 < 0 || xx4 >= MW || yy4 >= MH) continue; var o4 = yy4 * MW + xx4;
+      if (surf[o4] === 2 && Math.hypot(xx4 - S1.px[q4], yy4 - S1.py[q4]) <= SC_HW && (zone[o4] === 0 || zone[o4] === 3 || zone[o4] === 4)) zone[o4] = 5;
+    } } }
+  T.surf = surf; T.zone = zone;
   // 픽셀 지도 그리기
   var cv = document.createElement('canvas'); cv.width = MW; cv.height = MH;
   var x = cv.getContext('2d'), img = x.createImageData(MW, MH), d = img.data;
   var G = D.pal.g.map(hexRGB), R = D.pal.r.map(hexRGB), CA = hexRGB(D.pal.ca), CB = hexRGB(D.pal.cb);
   for (var y = 0; y < MH; y++) for (var xx = 0; xx < MW; xx++) {
     var o = y * MW + xx, s = surf[o], h = hash2(xx >> 1, y >> 1, ti), col;
-    if (s === 2) col = R[(h % 9 === 0) ? 2 : (h % 5 === 0 ? 1 : 0)];
+    if (s === 2 && zone[o] === 5) col = D.k === 'harbor' ? (((xx + y) >> 1) % 5 === 0 ? [96, 62, 34] : h % 6 === 0 ? [176, 128, 78] : [150, 104, 60]) : ((((xx >> 2) + (y >> 3)) & 1) ? [178, 98, 76] : [158, 84, 64]);
+    else if (s === 2) col = zone[o] === 1 ? (h % 4 === 0 ? [255, 255, 255] : [190, 225, 250]) : zone[o] === 2 ? (h % 4 === 0 ? [214, 180, 110] : [196, 160, 96]) : R[(h % 9 === 0) ? 2 : (h % 5 === 0 ? 1 : 0)];
     else if (s === 1) col = (((xx >> 3) + (y >> 3)) & 1) ? CA : CB;
+    else if (s === 3) { var zl = zone[o] === 4, wv = ((xx + (y >> 2) * 3) >> 2) % 7 === 0 && h % 3 === 0; col = zl ? (wv ? [255, 210, 90] : h % 4 === 0 ? [255, 120, 30] : [214, 60, 20]) : (wv ? [200, 235, 255] : h % 5 === 0 ? [70, 150, 230] : [40, 120, 210]); }
     else { var hh = hash2(xx >> 2, y >> 2, ti + 7); col = G[(hh % 13 === 0) ? 3 : (h % 7 === 0 ? 2 : (hh % 3 === 0 ? 1 : 0))]; }
     d[o * 4] = col[0]; d[o * 4 + 1] = col[1]; d[o * 4 + 2] = col[2]; d[o * 4 + 3] = 255;
   }
@@ -880,23 +1058,13 @@ function buildTrack(ti) {
   }
   // 출발선(체크 무늬)
   paintZone(-3, 0, function (px, py, along, lat) { if (along > -12 && along <= 0) put(px, py, ((Math.floor((lat + HW) / 4) + Math.floor(-along / 4)) & 1) ? BK : WH); });
-  // 관문 앞 세 갈래 길(⭐ 노랑 · ⭐⭐ 주황 · ⭐⭐⭐ 빨강)과 바닥 별
-  var LC = [[255, 214, 64], [255, 150, 40], [255, 70, 90]];
+  // 관문 앞 바닥(난이도는 무작위 → 한 가지 색 + 물음표)
+  var GC = [176, 120, 255], QM = ['.###.', '#...#', '...#.', '..#..', '.....', '..#..'];
   T.gates.forEach(function (gi) {
-    paintZone(gi - 22, gi, function (px, py, along, lat) {
-      var lane = lat < -HW / 3 ? 0 : lat > HW / 3 ? 2 : 1, edge = Math.abs(Math.abs(lat) - HW / 3) < 1;
-      if (edge) { if ((Math.floor(-along / 6)) % 2 === 0) put(px, py, WH); }
-      else blend(px, py, LC[lane], 0.4);
-    });
-    // 바닥 별(1·2·3개)
-    var STAR = ['..#..', '.###.', '#####', '.###.', '.#.#.'];
-    for (var lane = 0; lane < 3; lane++) {
-      var mid = (lane - 1) * (HW * 2 / 3), cnt = lane + 1;
-      for (var c3 = 0; c3 < cnt; c3++) {
-        var off = (c3 - (cnt - 1) / 2) * 7, j2 = (gi - 12 + N) % N;
-        var cx = T.px[j2] - T.ty[j2] * (mid + off), cy = T.py[j2] + T.tx[j2] * (mid + off);
-        for (var r5 = 0; r5 < 5; r5++) for (var c5 = 0; c5 < 5; c5++) if (STAR[r5][c5] === '#') put(cx - 2 + c5, cy - 2 + r5, WH);
-      }
+    paintZone(gi - 22, gi, function (px, py, along, lat) { blend(px, py, GC, 0.38); });
+    for (var q3 = -1; q3 <= 1; q3++) {
+      var j2 = (gi - 12 + N) % N, off = q3 * (HW * 2 / 3), cx = T.px[j2] - T.ty[j2] * off, cy = T.py[j2] + T.tx[j2] * off;
+      for (var r5 = 0; r5 < 6; r5++) for (var c5 = 0; c5 < 5; c5++) if (QM[r5][c5] === '#') put(cx - 2 + c5, cy - 3 + r5, WH);
     }
   });
   // 빨라지는 화살표 판
@@ -909,18 +1077,31 @@ function buildTrack(ti) {
       put(px, py, chev ? PADC[1] : PADC[0]);
     }
   });
+  // 열쇠 판 그리기(노랑·검정 줄무늬 + 열쇠 모양)
+  if (T.sc) { var S2 = T.sc;
+    for (var k7 = S2.pad; k7 <= S2.pad + 8; k7++) for (var l7 = 3; l7 <= hw[k7] - 3; l7 += 0.5) for (var u7 = 0; u7 < 4; u7++) {
+      var j7 = k7 % N, j8 = (k7 + 1) % N, bx = lerp(T.px[j7], T.px[j8], u7 / 4), by = lerp(T.py[j7], T.py[j8], u7 / 4);
+      put(bx - T.ty[j7] * l7 * S2.sg, by + T.tx[j7] * l7 * S2.sg, ((k7 * 4 + u7 + Math.round(l7)) >> 2) % 2 ? [255, 214, 64] : [60, 50, 20]);
+    }
+    var kj = (S2.pad + 4) % N, kx = T.px[kj] - T.ty[kj] * hw[kj] * 0.5 * S2.sg, ky = T.py[kj] + T.tx[kj] * hw[kj] * 0.5 * S2.sg;
+    for (var r7 = -4; r7 <= 4; r7++) for (var c7 = -4; c7 <= 4; c7++) put(kx + c7, ky + r7, [255, 255, 255]);
+    var KEYPX = ['.###.....', '#...#....', '#...#####', '#...#.#.#', '.###.....'];
+    for (r7 = 0; r7 < 5; r7++) for (c7 = 0; c7 < 9; c7++) if (KEYPX[r7][c7] === '#') put(kx - 4 + c7, ky - 2 + r7, [200, 130, 0]);
+  }
   // 장식(길에서 떨어진 곳에만)
   var set = DECO_SET[D.k], dp = DECO_PAL[D.k];
   function farFromRoad(px, py, m) {
     for (var q = 0; q < N; q += 3) { var dx = T.px[q] - px, dy = T.py[q] - py; if (dx * dx + dy * dy < m * m) return false; }
+    if (T.sc) for (q = 0; q < T.sc.n; q += 3) { if (Math.hypot(T.sc.px[q] - px, T.sc.py[q] - py) < SC_HW + 22) return false; }
     return true;
   }
   var placed = 0;
-  for (var tries = 0; tries < 2600 && placed < 260; tries++) {
+  for (var tries = 0; tries < 2600 * TSC * TSC && placed < 260 * TSC * TSC; tries++) {
     var pick = set[Math.floor(rr() * set.length)], spr = DECO[pick[0]], pal = dp[pick[0]];
     if (!pal) continue;
     var px = 20 + rr() * (MW - 40), py = 20 + rr() * (MH - 40);
-    if (!farFromRoad(px, py, HW + 18 + spr[0].length)) continue;
+    if (!farFromRoad(px, py, HWMAX + 18 + spr[0].length)) continue;
+    if (T.pools.some(function (pl) { return Math.hypot(pl.x - px, pl.y - py) < pl.r + 14; })) continue;
     var w = spr[0].length, h2 = spr.length;
     // 그림자
     for (var r6 = 0; r6 < h2; r6++) for (var c6 = 0; c6 < w; c6++) if (spr[r6][c6] !== '.') blend(px - w / 2 + c6 + 2, py - h2 + r6 + 2, [0, 0, 0], 0.18);
@@ -928,6 +1109,12 @@ function buildTrack(ti) {
     if (pick[1]) T.ob.push({ x: px, y: py - pick[2] / 2, r: pick[1] });
     placed++;
   }
+  // 길 위 바위
+  T.rocks.forEach(function (rk) {
+    var yy, xq;
+    for (yy = -rk.r - 1; yy <= rk.r + 1; yy++) for (xq = -rk.r - 1; xq <= rk.r + 1; xq++) { if (Math.hypot(xq, yy * 1.2) > rk.r + 0.5) continue; put(rk.x + xq + 2, rk.y + yy + 2, [30, 30, 36]); }
+    for (yy = -rk.r; yy <= rk.r; yy++) for (xq = -rk.r; xq <= rk.r; xq++) { var d2 = Math.hypot(xq, yy * 1.2); if (d2 > rk.r) continue; put(rk.x + xq, rk.y + yy, d2 > rk.r - 1.5 ? [70, 66, 70] : (xq + yy < -rk.r / 2 ? [190, 186, 180] : [130, 124, 122])); }
+  });
   x.putImageData(img, 0, 0);
   T.map = cv;
   // 작은 지도
@@ -935,6 +1122,7 @@ function buildTrack(ti) {
   var mx = mm.getContext('2d'), sc = Math.min(112 / MW, 84 / MH); T.msc = sc; T.mox = (120 - MW * sc) / 2; T.moy = (92 - MH * sc) / 2;
   mx.strokeStyle = 'rgba(255,255,255,.85)'; mx.lineWidth = 3; mx.lineJoin = 'round'; mx.beginPath();
   for (i = 0; i <= N; i += 4) { var q2 = i % N; var X = T.mox + T.px[q2] * sc, Y = T.moy + T.py[q2] * sc; if (i) mx.lineTo(X, Y); else mx.moveTo(X, Y); } mx.closePath(); mx.stroke();
+  if (T.sc) { mx.strokeStyle = 'rgba(255,214,64,.9)'; mx.lineWidth = 2; mx.setLineDash([3, 2]); mx.beginPath(); for (i = 0; i < T.sc.n; i += 3) { X = T.mox + T.sc.px[i] * sc; Y = T.moy + T.sc.py[i] * sc; if (i) mx.lineTo(X, Y); else mx.moveTo(X, Y); } mx.stroke(); mx.setLineDash([]); }
   mx.fillStyle = '#ffb02e'; T.gates.forEach(function (gi) { mx.fillRect(T.mox + T.px[gi] * sc - 2, T.moy + T.py[gi] * sc - 2, 4, 4); });
   mx.fillStyle = '#fff'; mx.fillRect(T.mox + T.px[0] * sc - 3, T.moy + T.py[0] * sc - 1, 6, 2);
   T.mini = mm;
@@ -979,7 +1167,7 @@ function kartSprites(color) {
 function kartSprite(K, a) { var k = Math.round(((a % (Math.PI * 2)) + Math.PI * 2) / (Math.PI * 2) * KDIR) % KDIR; return K.spr[k]; }
 
 // ===== 경주 상태 =====
-var G = null, LV = 1, TR = -1, LAST = { mode: 'cpu', cpu: 4 };
+var G = null, LV = 1, TR = -1, GEAR = 1, LAST = { mode: 'cpu', cpu: 4 };
 var keys = {}, Pad = { l: 0, r: 0, b: 0 };
 var SID = store.get('sid', '') || ('s' + Math.random().toString(36).slice(2, 12) + Date.now().toString(36));
 store.set('sid', SID);
@@ -1002,12 +1190,14 @@ function makeDeck(seed) {
 
 function newKart(i, name, local, bot) {
   return { i: i, name: name, col: COL[i % COL.length], spr: kartSprites(COL[i % COL.length]), x: 0, y: 0, a: 0, sp: 0, va: 0,
-    lap: 0, idx: 0, gd: 0, st: 'race', boost: 0, bmul: 1, spin: 0, slow: 0, shield: 0, inv: 0, item: null, roll: 0, ww: 0,
-    local: local, bot: bot, pg: 0, pt: 0, ok: 0, nq: 0, place: i + 1, buf: [], f: 0, ai: { off: 0, lane: 1, think: 0, ans: false, itemT: 0, wob: rnd(0, 6) }, tag: null };
+    lap: 0, idx: 0, gd: 0, st: 'race', boost: 0, bmul: 1, spin: 0, slow: 0, shield: 0, inv: 0, item: null, item2: null, roll: 0, ww: 0, offT: 0, sup: 0, pl: [0, 0, 0, 0],
+    local: local, bot: bot, pg: 0, pt: 0, ok: 0, nq: 0, place: i + 1, buf: [], f: 0, ai: { off: 0, lane: 1, think: 0, ans: false, itemT: 0, wob: rnd(0, 6), sc: 0, scd: -1 }, tag: null,
+    gear: 1, onSc: 0, sci: 0, key: -1, kfail: -1, dq: 0,
+    fastN: 0, keyN: 0, itN: 0, hitN: 0, rsN: 0, t3N: 0, upN: 0 };
 }
 function placeOnGrid(K, slot) {
   var T = G.T, N = T.N, back = 14 + slot * 15, d = (slot % 2 ? 1 : -1) * 13, j = (N - Math.ceil(back / STEP)) % N;
-  K.x = T.px[j] - T.ty[j] * d; K.y = T.py[j] + T.tx[j] * d; K.a = Math.atan2(T.ty[j], T.tx[j]); K.idx = j; K.ai.off = d;
+  K.x = T.px[j] - T.ty[j] * d; K.y = T.py[j] + T.tx[j] * d; K.a = K.ma = Math.atan2(T.ty[j], T.tx[j]); K.idx = j; K.ai.off = d;
 }
 function startRace(o) {
   // o: { mode, names, me, seed, t0, track, lv, net }
@@ -1018,6 +1208,8 @@ function startRace(o) {
   for (var i = 0; i < G.n; i++) {
     var local = i === o.me || o.mode === 'cpu';
     var K = newKart(i, o.names[i], local, o.mode === 'cpu' && i !== o.me ? BOT[o.lv] : null);
+    K.gear = i === o.me ? GEAR : Math.floor(Math.random() * 3);
+    if (i === o.me) K.pl = GARAGE.lv.slice();
     placeOnGrid(K, i); G.K.push(K);
   }
   $('#placeOf').textContent = G.n;
@@ -1032,7 +1224,7 @@ function startRace(o) {
 
 // ===== 차 움직이기 =====
 function inputOf(K, dt) {
-  if (K.i === G.me && K.st === 'race' && !G.q) {
+  if (K.i === G.me && K.st === 'race' && !G.q && !K.auto) {
     var l = keys.ArrowLeft || keys.KeyA || Pad.l, r = keys.ArrowRight || keys.KeyD || Pad.r;
     return { steer: (r ? 1 : 0) - (l ? 1 : 0), brake: !!(keys.ArrowDown || keys.KeyS || Pad.b) };
   }
@@ -1040,14 +1232,31 @@ function inputOf(K, dt) {
 }
 function laneOff(l) { return (l - 1) * HW * 2 / 3; }
 function botInput(K, dt) {
-  var T = G.T, N = T.N, ai = K.ai;
+  var T = G.T, N = T.N, ai = K.ai, S = T.sc;
+  // 지름길: 갈림길 앞에서 갈지 정하고(반쯤), 가기로 했으면 지름길 길을 따라가요
+  if (S && K.st === 'race') {
+    if (!K.onSc && K.idx > S.pad - 40 && K.idx < S.pad - 4 && ai.scd !== K.lap) { ai.scd = K.lap; ai.sc = K.kfail !== K.lap && Math.random() < 0.5 ? 1 : 0; }
+    if (ai.sc && ai.scd === K.lap && K.kfail !== K.lap && K.idx >= S.a - 10 && K.idx <= S.a + 3) ai.going = K.lap + 1;
+    if (ai.going === K.lap + 1 && (K.kfail === K.lap || K.idx > S.a + 45 || K.idx < S.a - 20)) ai.going = 0;
+    var goSc = K.onSc || ai.going === K.lap + 1;
+    if (goSc) {
+      var k0 = K.onSc ? Math.min(S.n - 1, K.sci + 8) : Math.min(S.n - 1, S.ent + 4);
+      var wantS = Math.atan2(S.py[k0] - K.y, S.px[k0] - K.x);
+      var adS = angDiff(K.a, wantS);
+      return { steer: clamp(adS * 2.6, -1, 1), brake: Math.abs(adS) > 1.0 && K.sp > 80 };
+    }
+  }
   var gi = K.gd < RULE.GATES && K.lap < RULE.LAPS ? T.gates[K.gd] : -1, toGate = gi >= 0 ? (gi - K.idx + N) % N : 9999;
   if (toGate < 70) {
-    if (!ai.chose) { ai.chose = 1; var c = K.bot ? K.bot.tier : [0.3, 0.45, 0.25], u = Math.random(); ai.lane = u < c[0] ? 0 : u < c[0] + c[1] ? 1 : 2; }
+    if (!ai.chose) { ai.chose = 1; ai.lane = Math.floor(Math.random() * 3); }
     ai.off += clamp(laneOff(ai.lane) - ai.off, -40 * dt, 40 * dt);
   } else {
     ai.chose = 0; ai.wob += dt * 0.6;
-    ai.off += clamp(Math.sin(ai.wob) * HW * 0.45 - ai.off, -15 * dt, 15 * dt);
+    var want0 = Math.sin(ai.wob) * T.hw[K.idx] * 0.45;
+    // 앞쪽 바위·모래 웅덩이 피하기
+    T.rocks.forEach(function (rk) { var j = K.idx; for (var o = 6; o < 40; o += 4) { var q = (j + o) % N; if (Math.hypot(T.px[q] - rk.x, T.py[q] - rk.y) < 30) { var lat = (rk.x - T.px[q]) * (-T.ty[q]) + (rk.y - T.py[q]) * T.tx[q]; want0 = lat > 0 ? lat - rk.r - 12 : lat + rk.r + 12; break; } } });
+    want0 = clamp(want0, -T.hw[K.idx] + 6, T.hw[K.idx] - 6);
+    ai.off += clamp(want0 - ai.off, -30 * dt, 30 * dt);
   }
   var look = (K.idx + 9) % N, tx = T.px[look] - T.ty[look] * ai.off, ty = T.py[look] + T.tx[look] * ai.off;
   var want = Math.atan2(ty - K.y, tx - K.x), steer = clamp(angDiff(K.a, want) * 2.4, -1, 1);
@@ -1056,48 +1265,88 @@ function botInput(K, dt) {
 }
 function stepKart(K, dt) {
   var T = G.T, inp = inputOf(K, dt);
-  K.boost = Math.max(0, K.boost - dt); K.slow = Math.max(0, K.slow - dt); K.shield = Math.max(0, K.shield - dt); K.inv = Math.max(0, K.inv - dt);
+  K.boost = Math.max(0, K.boost - dt); K.sup = Math.max(0, K.sup - dt); K.slow = Math.max(0, K.slow - dt); K.shield = Math.max(0, K.shield - dt); K.inv = Math.max(0, K.inv - dt);
   if (K.boost <= 0) K.bmul = 1;
+  // 파워 부스터(⭐⭐·⭐⭐⭐): 직접 운전하지만 빠르고, 핸들이 길을 따라가도록 살짝 도와주고, 길 밖에서도 안 느려지고, 공격을 안 맞아요
+  if (K.asst > 0 && K.st === 'race') {
+    K.asst -= dt; K.boost = Math.max(K.boost, 0.1); K.bmul = Math.max(K.bmul, K.amul); K.sup = Math.max(K.sup, 0.1); K.inv = Math.max(K.inv, 0.15);
+    if (!K.onSc) { var aj = (K.idx + 12) % T.N, aw = Math.atan2(T.py[aj] - K.y, T.px[aj] - K.x); inp = { steer: clamp(inp.steer + angDiff(K.a, aw) * 1.6, -1, 1), brake: inp.brake }; }
+    if (Math.random() < 0.8) part(K.x - Math.cos(K.a) * 8 + rnd(-2, 2), K.y - Math.sin(K.a) * 8 + rnd(-2, 2), Math.random() < 0.5 ? '#ffd640' : '#ff465a', 0.35);
+    if (K.asst <= 0) { K.asst = 0; K.boost = Math.max(K.boost, 0.8); K.bmul = 1.3; }
+  }
   if (K.st === 'gate') {
     K.sp = Math.max(0, K.sp - 500 * dt);
     K.a += clamp(angDiff(K.a, K.ga), -4 * dt, 4 * dt);
     K.x += Math.cos(K.a) * K.sp * dt; K.y += Math.sin(K.a) * K.sp * dt;
-    K.va = 0;
+    K.va = 0; K.ma = K.a;
     return;
   }
-  var s = surfAt(T, K.x, K.y), f = s === 2 ? 1 : s === 1 ? CURB : s === 0 ? OFF : 0.3;
+  var s = surfAt(T, K.x, K.y), z = s >= 0 ? T.zone[(K.y | 0) * MW + (K.x | 0)] : 0, f = s === 2 ? (z === 2 ? 0.6 : z === 5 ? 1.2 : 1) : s === 1 ? CURB : s === 0 ? OFF : 0.3;
+  var ice = s === 2 && z === 1 && K.sup <= 0;
+  if (K.pl[1] && f < 1 && s !== 3) f += (1 - f) * 0.15 * K.pl[1];   // 🛞 타이어
   if (K.inv > 0) f = Math.max(f, 0.92);
-  var top = MAXSP * (K.bot ? K.bot.sp : 1) * f * (K.boost > 0 ? K.bmul : 1) * (K.slow > 0 ? 0.45 : 1) * (K.st === 'fin' ? 0.55 : 1);
+  if (K.sup > 0) f = Math.max(f, 1);
+  // 길 밖에 5초 넘게 있으면 직전 관문에서 다시 출발
+  var lim = s === 3 ? (z === 4 ? 1.0 : 1.6) : OFF_LIMIT;   // 용암 1초 · 물 1.6초 · 그냥 길 밖 5초
+  if (K.st === 'race' && (s === 0 || s < 0 || s === 3) && (K.sup <= 0 || s === 3)) { K.offT += dt; K.offLim = lim; if (K.offT >= lim) { respawn(K); return; } } else K.offT = 0;
+  var GR = GEARS[K.gear == null ? 1 : K.gear] || GEARS[1];
+  var top = MAXSP * GR.top * (1 + 0.015 * K.pl[0]) * (K.bot ? K.bot.sp : 1) * f * (K.boost > 0 ? K.bmul : 1) * (K.slow > 0 ? 0.45 : 1) * (K.st === 'fin' ? 0.55 : 1);
   if (K.spin > 0) {
     K.spin -= dt; K.sp *= Math.exp(-4 * dt); K.va += 15 * dt;
   } else {
     K.va = 0;
     if (inp.brake) K.sp = Math.max(-35, K.sp - 320 * dt);
-    else if (K.sp < top) K.sp = Math.min(top, K.sp + Math.max(26, (top - K.sp) * ACC) * dt);
+    else if (K.sp < top) K.sp = Math.min(top, K.sp + Math.max(26, (top - K.sp) * ACC) * GR.acc * dt);
     else K.sp = Math.max(top, K.sp - 200 * dt);
     var tf = clamp(Math.abs(K.sp) / 60, 0, 1);
-    K.a += inp.steer * TURN * tf * dt * (K.sp < 0 ? -1 : 1);
+    K.a += inp.steer * TURN * GR.turn * (K.asst > 0 ? 1.35 : 1) * tf * dt * (K.sp < 0 ? -1 : 1) * (ice ? 1.25 : 1);
   }
-  K.x += Math.cos(K.a) * K.sp * dt; K.y += Math.sin(K.a) * K.sp * dt;
+  // 움직이는 방향(ma)은 차 방향(a)을 따라가요. 빙판에서는 아주 천천히 따라가서 미끄러져요.
+  if (K.ma == null) K.ma = K.a;
+  K.ma += clamp(angDiff(K.ma, K.a), -1, 1) * Math.min(1, (ice ? 1.6 : 18) * dt) * (Math.abs(angDiff(K.ma, K.a)) > 1 ? Math.abs(angDiff(K.ma, K.a)) : 1);
+  if (ice && Math.random() < 0.3) part(K.x, K.y, '#ffffff', 0.3);
+  if (s === 3 && Math.random() < 0.6) part(K.x + rnd(-6, 6), K.y + rnd(-6, 6), z === 4 ? '#ffb02e' : '#ffffff', 0.4, rnd(-20, 20), -40);
+  K.x += Math.cos(K.ma) * K.sp * dt; K.y += Math.sin(K.ma) * K.sp * dt;
   if (K.x < 8 || K.y < 8 || K.x > MW - 8 || K.y > MH - 8) { K.x = clamp(K.x, 8, MW - 8); K.y = clamp(K.y, 8, MH - 8); K.sp *= 0.5; }
   T.ob.forEach(function (o) {
     var dx = K.x - o.x, dy = K.y - o.y, d = Math.hypot(dx, dy), m = o.r + 5;
-    if (d < m && d > 0.01) { K.x = o.x + dx / d * m; K.y = o.y + dy / d * m; K.sp *= 0.6; }
+    if (d < m && d > 0.01) { K.x = o.x + dx / d * m; K.y = o.y + dy / d * m; if (K.i === G.me && K.sp > 70) G.shake = Math.max(G.shake || 0, 0.18); K.sp *= 0.6; }
   });
+  // 지름길: 이번 바퀴에 열쇠 문제를 틀렸으면 입구가 막혀요 · 열쇠가 없으면 끝의 문 앞에서 기다려요(본 길은 절대 막지 않아요)
+  var S = T.sc;
+  if (S && K.st === 'race') {
+    if (K.kfail === K.lap) scBlock(K, S, S.ent);
+    if (K.key !== K.lap) scBlock(K, S, S.door);
+  }
   // 빨라지는 판
   T.pads.forEach(function (p) { if (Math.abs(K.x - p.x) < 10 && Math.abs(K.y - p.y) < 10 && K.boost < 0.9) { K.boost = 1.0; K.bmul = Math.max(K.bmul, 1.45); if (K.i === G.me) beep('boost'); } });
   // 흙먼지·불꽃
   if (Math.abs(K.sp) > 40 && s === 0 && Math.random() < 0.5) part(K.x - Math.cos(K.a) * 7, K.y - Math.sin(K.a) * 7, T.pal.off === 'w' ? '#ffffff' : T.pal.off === 's' ? '#c9a060' : '#6a8a4a', 0.4);
   if (K.boost > 0 && Math.random() < 0.8) part(K.x - Math.cos(K.a) * 8, K.y - Math.sin(K.a) * 8, Math.random() < 0.5 ? '#ffb02e' : '#ff4d5e', 0.25);
 }
+function scBlock(K, S, dk) {
+  var rx = K.x - S.px[dk], ry = K.y - S.py[dk], rel = rx * S.tx[dk] + ry * S.ty[dk], lat = rx * (-S.ty[dk]) + ry * S.tx[dk];
+  if (Math.abs(lat) < SC_HW + 5 && rel > -7 && rel < 5) { K.x -= S.tx[dk] * (rel + 7); K.y -= S.ty[dk] * (rel + 7); K.sp = Math.min(K.sp, 10); }
+}
 function part(x, y, c, life, vx, vy) { if (G.parts.length < 400) G.parts.push({ x: x, y: y, c: c, t: life, vx: vx || rnd(-10, 10), vy: vy || rnd(-10, 10) }); }
 
 // 길 위 어디쯤인지(가까운 점 번호) · 바퀴 · 관문
 function track(K, now) {
-  var T = G.T, N = T.N, best = -1, bd = 1e9;
-  for (var o = -12; o <= 30; o++) {
+  var T = G.T, N = T.N, best = -1, bd = 1e9, S = T.sc;
+  if (S && K.onSc) {
+    var bs = K.sci, b2 = 1e9;
+    for (var o5 = -6; o5 <= 24; o5++) { var j5 = clamp(K.sci + o5, 0, S.n - 1), d5 = (S.px[j5] - K.x) * (S.px[j5] - K.x) + (S.py[j5] - K.y) * (S.py[j5] - K.y); if (d5 < b2) { b2 = d5; bs = j5; } }
+    K.sci = bs;
+    if (bs >= S.n - 3) { K.onSc = 0; K.idx = S.b; }
+    else if (Math.sqrt(b2) > SC_HW + 40 || bs <= 1) { K.onSc = 0; K.idx = bs <= 1 ? S.a : (bs > S.n / 2 ? S.b : S.a); }
+    else K.idx = S.a + Math.round((S.b - S.a) * bs / (S.n - 1));
+  }
+  if (!(S && K.onSc)) for (var o = -12; o <= 30; o++) {
     var j = (K.idx + o + N) % N, dx = T.px[j] - K.x, dy = T.py[j] - K.y, d = dx * dx + dy * dy;
     if (d < bd) { bd = d; best = j; }
+  }
+  if (!(S && K.onSc) && Math.sqrt(bd) >= HW + 100) {   // 길을 놓쳤으면 더 넓게 찾아요(앞쪽 위주)
+    for (o = -60; o <= 250; o++) { j = (K.idx + o + N) % N; dx = T.px[j] - K.x; dy = T.py[j] - K.y; d = dx * dx + dy * dy; if (d < bd) { bd = d; best = j; } }
   }
   if (Math.sqrt(bd) < HW + 100 && best >= 0) {
     var prev = K.idx;
@@ -1108,6 +1357,17 @@ function track(K, now) {
     if (back > 0 && back < N / 2 && K.sp > 20) K.ww += 0.03; else K.ww = Math.max(0, K.ww - 0.05);
     K.idx = best;
   }
+  // 지름길 입구를 지나면 지름길로 따라가고, 열쇠 문제가 나와요(달리면서 풀어요)
+  if (S && !K.onSc && K.idx >= S.a - 12 && K.idx <= S.a + 60) {
+    for (var k6 = Math.max(1, S.ent - 2); k6 <= Math.min(S.n - 4, S.ent + 8); k6++) if (Math.hypot(S.px[k6] - K.x, S.py[k6] - K.y) < SC_HW) { K.onSc = 1; K.sci = k6; break; }
+  }
+  if (S && K.onSc && !K.dq && K.key !== K.lap && K.kfail !== K.lap && K.st === 'race' && now >= G.t0) { startDoorQ(K); K.auto = 1; }
+  // 열쇠 판을 밟으면(지름길 쪽 절반) 바로 문제가 나오고, 차는 저절로 지름길로 달려요
+  if (S && !K.onSc && !K.dq && !K.asst && K.key !== K.lap && K.kfail !== K.lap && K.st === 'race' && now >= G.t0 && K.idx >= S.pad && K.idx <= S.pad + 8) {
+    var latp = (K.x - T.px[K.idx]) * (-T.ty[K.idx]) + (K.y - T.py[K.idx]) * T.tx[K.idx];
+    if (latp * S.sg > 2 || (K.bot && K.ai.sc && K.ai.scd === K.lap)) { K.ai.sc = 1; K.ai.scd = K.lap; K.auto = 1; startDoorQ(K); }
+  }
+  if (K.auto && S && (K.onSc || K.idx > S.a + 12 || K.kfail === K.lap)) K.auto = 0;
   var idxAdj = (K.gd > 0 || K.idx < N / 2) ? K.idx : K.idx - N;
   K.pg = K.st === 'fin' ? RULE.LAPS * N + 1e6 : K.lap * N + idxAdj;
   // 관문
@@ -1115,29 +1375,89 @@ function track(K, now) {
     var gi = T.gates[K.gd], rel = (K.idx - gi + 3 + N) % N;
     if (rel <= 34) {
       var d = (K.x - T.px[gi]) * (-T.ty[gi]) + (K.y - T.py[gi]) * T.tx[gi];
-      var lane = d < -HW / 3 ? 0 : d > HW / 3 ? 2 : 1;
-      enterGate(K, gi, lane + 1);
+      enterGate(K, gi, 1 + Math.floor(Math.random() * 3));   // 난이도는 무작위(⭐ · ⭐⭐ · ⭐⭐⭐ 각각 1/3)
     }
   }
 }
 function enterGate(K, gi, tier) {
-  K.st = 'gate'; K.gt = tier; K.ga = Math.atan2(G.T.ty[gi], G.T.tx[gi]); K.sp *= 0.35;
+  if (K.asst > 0.2) { K.rbank = (K.rbank || 0) + K.asst; K.rbmul = K.amul; }   // 관문에서 남은 부스터 시간은 다음 관문 뒤에 이어서 써요
+  if (K.asst > 0) { K.asst = 0; K.boost = 0; K.sup = 0; }
+  K.st = 'gate'; K.gt = tier; K.gw = 0; K.ga = Math.atan2(G.T.ty[gi], G.T.tx[gi]); K.sp *= 0.35;
   if (K.i === G.me) { beep('gate'); openQ(tier); }
   else if (K.bot) {
-    var b = K.bot, q = QD[G.deck[tier][(K.nq * 7 + K.i * 13) % G.deck[tier].length]], ty = q[3];
-    var tm = b.t[ty][tier] * rnd(0.7, 1.3), ok = Math.random() < b.acc - (tier - 1) * 0.07;
-    K.ai.think = tm + (ok ? OK_HOLD : WRONG_HOLD); K.ai.ans = ok; K.nq++;
+    botThink(K, tier, 0);
   }
 }
-function leaveGate(K, ok) {
+// 컴퓨터: 문제 하나 푸는 시간과 맞힐지를 정해요(틀리면 같은 관문에서 다른 문제를 또 풀어요)
+function botThink(K, tier, extra) {
+  var b = K.bot, q = QD[G.deck[tier][(K.nq * 7 + K.i * 13) % G.deck[tier].length]], ty = q[3];
+  var tm = b.t[ty][tier] * rnd(0.7, 1.3), ok = Math.random() < b.acc - (tier - 1) * 0.07;
+  K.ai.think = extra + tm + (ok ? OK_HOLD : 0); K.ai.ans = ok; K.ai.fast = ok && tm < QSEC[ty][tier] / 2; K.nq++; K.gt = tier;
+}
+function startDoorQ(K) {
+  K.dq = 1;
+  if (K.i === G.me) { beep('gate'); openDoorQ(); }
+  else if (K.bot) { K.ai.think = K.bot.t[1][1] * 0.5 * rnd(0.7, 1.3); K.ai.ans = Math.random() < K.bot.acc; }
+}
+function doorDone(K, ok) {
+  var T = G.T, S = T.sc; K.dq = 0;
+  if (ok) {
+    K.key = K.lap; K.keyN++; K.pt += DOOR_PT; K.boost = Math.max(K.boost, 2.4); K.bmul = Math.max(K.bmul, 1.55);
+    for (var i = 0; i < 12; i++) part(K.x, K.y, i % 2 ? '#ffd640' : '#9be564', 0.5, rnd(-50, 50), rnd(-50, 50));
+    if (K.i === G.me) { banner('🔓 지름길 문이 열렸어요!', '+' + DOOR_PT + '점 · 이번 바퀴 동안 지나갈 수 있어요', 1.3); beep('ok'); }
+  } else {
+    K.kfail = K.lap; K.auto = 0; K.ai.sc = 0; K.ai.going = 0;
+    if (K.onSc) {   // 이미 지름길 안이면 갈림길로 돌아가요
+      K.onSc = 0; var j = (S.a + 2) % T.N; K.x = T.px[j]; K.y = T.py[j]; K.a = K.ma = Math.atan2(T.ty[j], T.tx[j]); K.idx = j; K.sp = 0; K.inv = Math.max(K.inv, 1);
+      if (K.i === G.me) { banner('🔒 문이 열리지 않았어요', '갈림길로 돌아왔어요. 원래 길로 달려요', 1.6); CAM.snap = 1; }
+    } else if (K.i === G.me) banner('🔒 이번 바퀴는 지름길이 닫혀요', '원래 길로 계속 달려요', 1.4);
+  }
+}
+// 따라잡기: 나를 뺀 가장 앞선 차와 반 바퀴 넘게 벌어졌는지
+function catchUp(K) { var mx = -1e9; G.K.forEach(function (o) { if (o !== K && o.pg > mx) mx = o.pg; }); return mx - K.pg >= G.T.N / 2; }
+function leaveGate(K, ok, fast) {
   var t = K.gt; K.gd++; K.st = 'race';
   if (ok) {
-    K.ok++; K.pt += RULE.PT[t]; K.boost = TURBO[t]; K.bmul = 1.5;
-    if (!K.item && !K.roll && Math.random() < ITEM_P[t]) giveItem(K, t);
-    if (K.i === G.me) beep('boost');
+    var cu = catchUp(K) ? CATCH : 1;
+    var dur = TURBO[t] * cu + (fast ? FAST_BONUS[t] : 0) + (t >= 2 ? 0.5 * K.pl[2] : 0);   // 🔋 부스터 배터리
+    K.ok++; K.pt += RULE.PT[t];
+    var bank = K.rbank || 0, bmul = K.rbmul || 1.8; K.rbank = 0;
+    if (t >= 2) startRocket(K, dur + bank, Math.max(TMUL[t], bank > 0 ? bmul : 0));
+    else if (bank > 0) startRocket(K, bank, bmul);
+    else { K.boost = dur; K.bmul = TMUL[t]; }
+    if (bank > 0 && K.i === G.me) feed('🔥 남은 부스터 ' + bank.toFixed(1) + '초를 이어서 써요');
+    if (fast) { K.fastN++; if (K.i === G.me) feed('⚡ 번개 출발! 빨리 맞혀서 ' + (t >= 2 ? '부스터' : '터보') + ' +' + FAST_BONUS[t] + '초'); }
+    if (t === 3) K.t3N++;
+    if (K.i === G.me) G.shake = Math.max(G.shake || 0, t >= 2 ? 0.15 : 0.08);
+    if (cu > 1 && K.i === G.me) feed('🚀 따라잡기 보너스! 터보 시간·아이템 확률 ×1.5');
+    if (Math.random() < Math.min(1, ITEM_P[t] * cu)) {
+      if (!K.item && !K.roll) giveItem(K, t);
+      else if (t === 3 && !K.item2) K.item2 = rollItem(K.place, G.n, 3);   // ⭐⭐⭐은 아이템을 하나 더 쌓아 둬요
+    }
+    if (t === 3) for (var i = 0; i < 20; i++) part(K.x, K.y, i % 2 ? '#ffd640' : '#ff465a', 0.6, rnd(-70, 70), rnd(-70, 70));
+    if (K.i === G.me) { beep('boost'); if (t === 3) banner('🔥 슈퍼 부스터!', Math.round(dur * 10) / 10 + '초 동안 2.2배 속도 · 핸들 보조 · 공격 막기', 1.4); else if (t === 2) banner('🚀 파워 부스터!', Math.round(dur * 10) / 10 + '초 동안 1.8배 속도 · 핸들 보조 · 공격 막기', 1.1); }
   }
 }
-function botGate(K, dt) { if (K.st === 'gate' && K.bot) { K.ai.think -= dt; if (K.ai.think <= 0) leaveGate(K, K.ai.ans); } }
+function startRocket(K, dur, mul) { K.asst = dur; K.amul = mul; }   // 파워 부스터 시작
+function respawn(K) {
+  var T = G.T, N = T.N, j, d = 0;
+  if (K.gd > 0) j = (T.gates[K.gd - 1] + 4) % N;          // 직전 관문 바로 뒤
+  else if (K.lap > 0) j = 3;                              // 이번 바퀴 관문이 아직이면 출발선 바로 뒤
+  else j = (N - 6) % N;                                   // 첫 바퀴 첫 관문 전이면 출발선 앞
+  K.x = T.px[j] - T.ty[j] * d; K.y = T.py[j] + T.tx[j] * d; K.a = K.ma = Math.atan2(T.ty[j], T.tx[j]);
+  K.rsN++; if (K.asst > 0.2) { K.rbank = (K.rbank || 0) + K.asst; K.rbmul = K.amul; } K.asst = 0; if (K.i === G.me) G.shake = Math.max(G.shake || 0, 0.3);
+  K.idx = j; K.onSc = 0; K.sp = 0; K.offT = 0; K.spin = 0; K.slow = 0; K.inv = Math.max(K.inv, 1.2); K.ai.off = 0;
+  for (var i = 0; i < 16; i++) part(K.x, K.y, '#ffffff', 0.5, rnd(-50, 50), rnd(-50, 50));
+  if (K.i === G.me) { beep('gate'); banner('↩ 다시 출발!', K.gd > 0 ? '길 밖에 5초 넘게 있어서 직전 관문으로 돌아왔어요' : '길 밖에 5초 넘게 있어서 출발선으로 돌아왔어요', 1.6); CAM.snap = 1; }
+}
+function botGate(K, dt) {
+  if (K.dq && K.bot) { K.ai.think -= dt; if (K.ai.think <= 0) doorDone(K, K.ai.ans); }
+  if (K.st !== 'gate' || !K.bot) return;
+  K.ai.think -= dt;
+  if (K.ai.think > 0) return;
+  if (K.ai.ans) leaveGate(K, true, K.ai.fast);
+  else { K.gw++; botThink(K, K.gw >= RETRY_EASY ? 1 : K.gt, WRONG_HOLD); }
+}
 
 // ===== 아이템 =====
 function rollItem(place, n, tier) {
@@ -1145,7 +1465,8 @@ function rollItem(place, n, tier) {
   if (n > 1 && place === 1) bag = [['honey', 40], ['shield', 35], ['turbo', 25]];
   else if (n > 2 && place === n || n === 2 && place === 2) bag = [['star', 35], ['balloon', 35], ['turbo', 30]];
   else bag = [['balloon', 35], ['turbo', 30], ['honey', 15], ['shield', 20]];
-  if (tier === 3 && place > 1) bag.forEach(function (b) { if (b[0] === 'balloon' || b[0] === 'star') b[1] += 15; });
+  if (tier === 1) bag = bag.filter(function (b) { return b[0] !== 'star' && b[0] !== 'balloon'; }).concat(bag.some(function (b) { return b[0] === 'turbo'; }) ? [] : [['turbo', 30]]);   // ⭐은 기본 아이템만
+  if (tier === 3) bag.forEach(function (b) { if (b[0] === 'balloon' || b[0] === 'star' || (place === 1 && b[0] === 'shield')) b[1] += 30; });
   var sum = bag.reduce(function (s, b) { return s + b[1]; }, 0), u = Math.random() * sum;
   for (var i = 0; i < bag.length; i++) { u -= bag[i][1]; if (u <= 0) return bag[i][0]; }
   return bag[0][0];
@@ -1157,7 +1478,7 @@ function giveItem(K, tier) {
 }
 function useItem(K) {
   if (!K.item || K.st === 'gate' && K.item !== 'shield') return;
-  var it = K.item; K.item = null;
+  var it = K.item; K.item = K.item2; K.item2 = null; K.itN++;
   if (it === 'turbo') { K.boost = 2.2; K.bmul = 1.6; if (K.i === G.me) beep('boost'); }
   else if (it === 'star') { K.boost = 3.2; K.bmul = 1.75; K.inv = 3.2; if (K.i === G.me) beep('boost'); }
   else if (it === 'shield') { K.shield = 12; if (K.i === G.me) beep('shield'); }
@@ -1182,6 +1503,7 @@ function hitKart(K, kind, by) {
   if (kind === 'b') { K.spin = 1.2; K.sp *= 0.3; for (var i = 0; i < 14; i++) part(K.x, K.y, '#5ac8ff', 0.5, rnd(-60, 60), rnd(-60, 60)); }
   else if (kind === 'h') { K.slow = 1.6; K.sp *= 0.5; }
   else if (kind === 'bump') { K.spin = 0.7; K.sp *= 0.4; }
+  K.hitN++; if (K.i === G.me) G.shake = Math.max(G.shake || 0, 0.4);
   if (K.i === G.me) { beep('hit'); feed(kind === 'b' ? '💧 물풍선에 맞았어요!' : kind === 'h' ? '🍯 꿀을 밟았어요!' : '🌟 별똥 차와 부딪쳤어요!'); }
 }
 function stepItems(dt) {
@@ -1250,6 +1572,18 @@ function buildTags() {
 }
 var bannerT = 0;
 function banner(txt, sub, sec) { var b = $('#banner'); b.innerHTML = esc(txt) + (sub ? '<small>' + esc(sub) + '</small>' : ''); b.classList.remove('hide'); bannerT = sec || 1.2; }
+function posPop(up, place) { var e = $('#posPop'); e.textContent = (up ? '▲ ' : '▼ ') + place + '등' + (up ? '!' : ''); e.className = up ? 'up' : 'down'; void e.offsetWidth; e.classList.add('go'); beep(up ? 'tick' : 'key'); }
+// 왼쪽 실시간 순위표: 모든 차의 순위 · 이름 · 몇 바퀴째(관문 중이면 📝, 들어오면 🏁)
+function liveRank(now) {
+  var box = $('#liveRank');
+  if (!G.lrAt || now - G.lrAt > 500) { G.lrAt = now; var hud = document.querySelector('.hudtop'); box.style.top = (hud.offsetTop + hud.offsetHeight + 6) + 'px'; }
+  var ord = G.K.slice().sort(function (a, b) { return a.place - b.place; });
+  var html = ord.map(function (K) {
+    var st = K.st === 'fin' ? '🏁' : (K.st === 'gate' || K.dq || (K.f & 8)) ? '📝' : Math.min(RULE.LAPS, K.lap + 1) + '/' + RULE.LAPS;
+    return '<div class="lr' + (K.i === G.me ? ' me' : '') + '" style="--c:' + K.col + '"><b>' + K.place + '</b><span class="n">' + esc(K.i === G.me ? K.name + ' (나)' : K.name) + '</span><small>' + st + '</small></div>';
+  }).join('');
+  if (html !== G.lrHtml) { box.innerHTML = html; G.lrHtml = html; }
+}
 function feed(msg) {
   var f = $('#feed'), d = document.createElement('div'); d.textContent = msg; f.insertBefore(d, f.firstChild);
   while (f.children.length > 4) f.removeChild(f.lastChild);
@@ -1260,16 +1594,18 @@ function setItemUI() {
   var K = G.K[G.me], b = $('#itemBtn'), ic = $('#itemIc');
   if (K.roll > 0) { b.classList.remove('empty'); b.classList.add('spin'); return; }
   b.classList.remove('spin');
-  if (K.item) { ic.textContent = ITEMS[K.item].e; b.classList.remove('empty'); b.title = ITEMS[K.item].n; }
+  if (K.item) { ic.textContent = ITEMS[K.item].e + (K.item2 ? '+' : ''); b.classList.remove('empty'); b.title = ITEMS[K.item].n; }
   else { ic.textContent = '🎁'; b.classList.add('empty'); b.title = '아이템 없음'; }
 }
 var STARPX = ['..#..', '.###.', '#####', '.###.', '.#.#.'];
 function draw(now) {
   var T = G.T, me = G.K[G.me];
   var lx = me.x + Math.cos(me.a) * 30, ly = me.y + Math.sin(me.a) * 22;
-  CAM.x += (lx - VW / 2 - CAM.x) * 0.15; CAM.y += (ly - VH / 2 - CAM.y) * 0.15;
+  var cf = CAM.snap ? 1 : 0.15; CAM.snap = 0;
+  CAM.x += (lx - VW / 2 - CAM.x) * cf; CAM.y += (ly - VH / 2 - CAM.y) * cf;
   CAM.x = clamp(CAM.x, 0, MW - VW); CAM.y = clamp(CAM.y, 0, MH - VH);
   var ox = Math.round(CAM.x), oy = Math.round(CAM.y);
+  if (G.shake > 0 && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { var sk = Math.min(1, G.shake * 5) * 3; ox = clamp(ox + Math.round(rnd(-sk, sk)), 0, MW - VW); oy = clamp(oy + Math.round(rnd(-sk, sk)), 0, MH - VH); }
   cx.drawImage(T.map, ox, oy, VW, VH, 0, 0, VW, VH);
   // 관문(기둥 + 별 현수막)
   var blink = Math.floor(now / 300) % 2;
@@ -1277,19 +1613,36 @@ function draw(now) {
     var px = T.px[gi], py = T.py[gi], nx = -T.ty[gi], ny = T.tx[gi];
     if (px < ox - 60 || py < oy - 60 || px > ox + VW + 60 || py > oy + VH + 60) return;
     var mine = me.gd === g && me.st !== 'fin' && me.lap < RULE.LAPS;
-    var LC = ['#ffd640', '#ff9628', '#ff465a'];
+    var LC = ['#ffd640', '#ff9628', '#ff465a', '#b078ff'];
     for (var s = -HW - 3; s <= HW + 3; s++) {
-      var lane = s < -HW / 3 ? 0 : s > HW / 3 ? 2 : 1;
-      cx.fillStyle = Math.abs(Math.abs(s) - HW / 3) < 1 ? '#1a1a2a' : LC[lane];
+      cx.fillStyle = LC[((Math.floor((s + 60) / 5) + Math.floor(now / 160)) % 4 + 4) % 4];
       cx.fillRect(Math.round(px + nx * s - ox) - 1, Math.round(py + ny * s - oy) - 7, 3, 4);
     }
     [-HW - 4, HW + 4].forEach(function (s) { cx.fillStyle = '#2a2a3a'; cx.fillRect(Math.round(px + nx * s - ox) - 2, Math.round(py + ny * s - oy) - 10, 4, 12); cx.fillStyle = '#ffffff'; cx.fillRect(Math.round(px + nx * s - ox) - 1, Math.round(py + ny * s - oy) - 10, 2, 2); });
-    for (var lane2 = 0; lane2 < 3; lane2++) for (var c = 0; c <= lane2; c++) {
-      var s2 = laneOff(lane2) + (c - lane2 / 2) * 6, sx = Math.round(px + nx * s2 - ox) - 2, sy = Math.round(py + ny * s2 - oy) - 7;
-      cx.fillStyle = '#ffffff'; for (var r = 0; r < 5; r++) for (var k = 0; k < 5; k++) if (STARPX[r][k] === '#') cx.fillRect(sx + k, sy + r - 1, 1, 1);
+    var QPX = ['.###.', '#...#', '...#.', '..#..', '.....', '..#..'];
+    for (var c = -1; c <= 1; c++) {
+      var s2 = c * HW * 2 / 3, sx = Math.round(px + nx * s2 - ox) - 2, sy = Math.round(py + ny * s2 - oy) - 8;
+      cx.fillStyle = '#1a1a2a'; cx.fillRect(sx - 1, sy - 1, 7, 8);
+      cx.fillStyle = '#ffffff'; for (var r = 0; r < 6; r++) for (var k = 0; k < 5; k++) if (QPX[r][k] === '#') cx.fillRect(sx + k, sy + r, 1, 1);
     }
     if (mine && blink) { cx.fillStyle = '#ffffff'; cx.fillRect(Math.round(px - ox) - 1, Math.round(py - oy) - 16, 3, 5); cx.fillRect(Math.round(px - ox) - 1, Math.round(py - oy) - 9, 3, 2); }
   });
+  // 지름길 문(내 열쇠 기준으로 열림/닫힘)
+  var S = T.sc;
+  if (S) {
+    var open = me.key === me.lap, shut = me.kfail === me.lap && !open;
+    [[S.door, 0]].concat(shut ? [[S.ent, 1]] : []).forEach(function (bar) {
+    var dk = bar[0], dpx = S.px[dk], dpy = S.py[dk], dnx = -S.ty[dk], dny = S.tx[dk];
+    if (!(dpx < ox - 60 || dpy < oy - 60 || dpx > ox + VW + 60 || dpy > oy + VH + 60)) {
+      if (!open) for (var s3 = -SC_HW; s3 <= SC_HW; s3++) { cx.fillStyle = shut ? '#555a69' : ((s3 + 40) >> 2) % 2 ? '#ff465a' : '#ffffff'; cx.fillRect(Math.round(dpx + dnx * s3 - ox), Math.round(dpy + dny * s3 - oy) - 6, 1, 3); }
+      [-SC_HW - 3, SC_HW + 3].forEach(function (s4) { var X = Math.round(dpx + dnx * s4 - ox), Y = Math.round(dpy + dny * s4 - oy); cx.fillStyle = '#2a2a3a'; cx.fillRect(X - 2, Y - 11, 4, 13); cx.fillStyle = open ? '#9be564' : shut ? '#888' : '#ff465a'; cx.fillRect(X - 1, Y - 11, 2, 2); });
+      var LX = Math.round(dpx - ox), LY = Math.round(dpy - oy) - 15;
+      cx.fillStyle = '#1a1a2a'; cx.fillRect(LX - 4, LY - 1, 9, 8);
+      cx.fillStyle = open ? '#9be564' : '#ffd640'; cx.fillRect(LX - 3, LY + 2, 7, 4); cx.fillRect(LX - 2, LY, 1, 2); cx.fillRect(LX + 2, LY - (open ? 1 : 0), 1, 2); cx.fillRect(LX - 2, LY - 1 - (open ? 1 : 0), 5, 1);
+      cx.fillStyle = '#1a1a2a'; cx.fillRect(LX, LY + 3, 1, 2);
+    }
+    });
+  }
   // 꿀 웅덩이
   G.honey.forEach(function (h) {
     var x = Math.round(h.x - ox), y = Math.round(h.y - oy);
@@ -1308,13 +1661,16 @@ function draw(now) {
     if (flick) { cx.globalAlpha = 0.45; cx.fillStyle = '#fff6a0'; cx.fillRect(x - 8, y - 8, 16, 16); cx.globalAlpha = 1; }
     if (K.shield > 0 || (K.f & 2)) { cx.strokeStyle = 'rgba(160,230,255,.9)'; cx.lineWidth = 1; cx.beginPath(); cx.arc(x + 0.5, y - 0.5, 11, 0, Math.PI * 2); cx.stroke(); cx.fillStyle = 'rgba(255,255,255,.9)'; cx.fillRect(x - 6, y - 8, 2, 2); }
     if (K.slow > 0 || (K.f & 32)) { cx.fillStyle = '#ffc93c'; cx.fillRect(x - 7, y + 5, 3, 2); cx.fillRect(x + 4, y + 5, 3, 2); }
-    if (K.st === 'gate' || (K.f & 8)) { cx.fillStyle = '#fff'; cx.fillRect(x - 1, y - 16, 3, 5); cx.fillRect(x - 1, y - 9, 3, 2); }
+    if (K.st === 'gate' || K.dq || (K.f & 8)) { cx.fillStyle = '#fff'; cx.fillRect(x - 1, y - 16, 3, 5); cx.fillRect(x - 1, y - 9, 3, 2); }
     if (K.tag) { K.tag.style.display = ''; K.tag.style.transform = 'translate(' + ((x / VW) * cv.clientWidth) + 'px,' + (((y - 12) / VH) * cv.clientHeight) + 'px) translate(-50%,-100%)'; }
   });
   // 물풍선
   G.balls.forEach(function (b) { var x = Math.round(b.x - ox), y = Math.round(b.y - oy); cx.fillStyle = '#2b8bd9'; cx.fillRect(x - 3, y - 3, 6, 6); cx.fillStyle = '#7fd0ff'; cx.fillRect(x - 2, y - 2, 4, 4); cx.fillStyle = '#fff'; cx.fillRect(x - 1, y - 2, 1, 1); });
   // 작은 점(불꽃·먼지·꽃가루)
   G.parts.forEach(function (p) { cx.fillStyle = p.c; cx.fillRect(Math.round(p.x - ox), Math.round(p.y - oy), 2, 2); });
+  // 터보 속도선
+  if ((me.boost > 0 || me.sup > 0) && me.st === 'race') { cx.fillStyle = 'rgba(255,255,255,.55)'; var ca = Math.cos(me.ma == null ? me.a : me.ma), sa = Math.sin(me.ma == null ? me.a : me.ma);
+    for (var sl = 0; sl < 9; sl++) { var lx0 = rnd(0, VW), ly0 = rnd(0, VH); if (Math.abs(lx0 - (me.x - ox)) < 26 && Math.abs(ly0 - (me.y - oy)) < 20) continue; var ln0 = rnd(6, 14); for (var st0 = 0; st0 < ln0; st0++) cx.fillRect(Math.round(lx0 - ca * st0), Math.round(ly0 - sa * st0), 1, 1); } }
   // 작은 지도
   var mc = $('#mini').getContext('2d'); mc.clearRect(0, 0, 120, 92); mc.drawImage(T.mini, 0, 0);
   G.K.forEach(function (K) { mc.fillStyle = K.col; var s = K.i === G.me ? 6 : 4; mc.fillRect(T.mox + K.x * T.msc - s / 2, T.moy + K.y * T.msc - s / 2, s, s); if (K.i === G.me) { mc.strokeStyle = '#fff'; mc.strokeRect(T.mox + K.x * T.msc - 4, T.moy + K.y * T.msc - 4, 8, 8); } });
@@ -1325,9 +1681,9 @@ function nextQ(tier) { var d = G.deck[tier], i = d[G.qp[tier] % d.length]; G.qp[
 function openQ(tier) {
   var qi = nextQ(tier), q = QD[qi];
   G.q = { qi: qi, tier: tier, type: q[3], t: QSEC[q[3]][tier], max: QSEC[q[3]][tier], done: false, hold: 0, input: '' };
-  G.K[G.me].nq++;
+  G.K[G.me].nq++; G.K[G.me].gt = tier;
   $('#qp').classList.remove('hide');
-  $('#qTag').textContent = '⭐'.repeat(tier) + ' ' + ['', '쉬운 길', '보통 길', '도전 길'][tier];
+  $('#qTag').textContent = '🎲 ' + '⭐'.repeat(tier) + ' ' + ['', '쉬운 문제', '보통 문제', '도전 문제'][tier] + (catchUp(G.K[G.me]) ? ' · 🚀 따라잡기 ×1.5' : '');
   $('#qLes').textContent = LNAME[q[1]];
   $('#qText').textContent = q[4];
   $('#qRes').classList.add('hide');
@@ -1342,7 +1698,27 @@ function openQ(tier) {
   }
   updQTime();
 }
-function updQTime() { var q = G.q; if (!q) return; $('#qBar').style.width = (q.t / q.max * 100) + '%'; $('#qBar').style.background = q.t < 6 ? '#ff4d6d' : '#9be564'; $('#qSec').textContent = Math.ceil(q.t) + '초'; }
+// 지름길 열쇠 문제: 비례식 a : b = c : d 에서 한 칸이 □ (외항의 곱 = 내항의 곱)
+function makeDoorQ() {
+  var a = 2 + Math.floor(Math.random() * 8), b = 2 + Math.floor(Math.random() * 8), k = 2 + Math.floor(Math.random() * 5);
+  if (a === b) b = b === 9 ? 2 : b + 1;
+  var v = [a, b, a * k, b * k], pos = Math.floor(Math.random() * 4), ans = v[pos], sv = v.map(function (x, i) { return i === pos ? '□' : String(x); });
+  var text = sv[0] + ' : ' + sv[1] + ' = ' + sv[2] + ' : ' + sv[3] + '에서 □에 알맞은 수를 구하세요.';
+  var e = '외항의 곱과 내항의 곱은 같아요. ' + v[0] + ' × ' + v[3] + ' = ' + v[1] + ' × ' + v[2] + ' = ' + (v[0] * v[3]) + '이므로 □ = ' + ans + '이에요.';
+  return [0, 4, 2, 1, text, null, 0, ans, e];
+}
+function openDoorQ() {
+  var Q = makeDoorQ();
+  G.q = { door: true, Q: Q, tier: 2, type: 1, t: DOOR_SEC, max: DOOR_SEC, done: false, hold: 0, input: '' };
+  $('#qp').classList.remove('hide');
+  $('#qTag').textContent = '🔑 지름길 열쇠 문제 · 차는 저절로 달려요 (' + DOOR_SEC + '초)';
+  $('#qLes').textContent = '비례식의 성질';
+  $('#qText').textContent = Q[4];
+  $('#qRes').classList.add('hide');
+  $('#qOpts').classList.add('hide'); $('#qNum').classList.remove('hide'); $('#qBox').textContent = '';
+  updQTime();
+}
+function updQTime() { var q = G.q; if (!q) return; $('#qBar').style.width = (q.t / q.max * 100) + '%'; var fz = !q.door && !q.done && q.t >= q.max * (1 - fastWin(G.K[G.me])); $('#qBar').style.background = fz ? '#ffd640' : q.t < 6 ? '#ff4d6d' : '#9be564'; $('#qSec').textContent = (fz ? '⚡ ' : '') + Math.ceil(q.t) + '초'; }
 function normNum(s) { s = String(s).replace(/[,\s]/g, ''); if (!/^\d*\.?\d+$|^\d+\.$/.test(s)) return null; return Number(s); }
 function keyIn(k) {
   var q = G && G.q; if (!q || q.done || q.type !== 1) return;
@@ -1355,18 +1731,23 @@ function keyIn(k) {
 }
 function answer(v) {
   var q = G.q; if (!q || q.done) return;
-  var Q = QD[q.qi], ok;
+  var Q = q.door ? q.Q : QD[q.qi], ok;
   if (q.type === 0) { if (v == null) ok = false; else ok = v === Q[6]; }
   else { if (v === 'submit') { var n = normNum(q.input); if (n === null) { toast('숫자를 입력해 주세요'); return; } ok = Math.abs(n - Number(Q[7])) < 1e-9; } else ok = false; }
-  q.done = true; q.ok = ok; q.hold = ok ? OK_HOLD : WRONG_HOLD;
+  q.done = true; q.ok = ok; q.fast = ok && !q.door && q.t >= q.max * (1 - fastWin(G.K[G.me]));
+  if (q.door && ok) { doorDone(G.K[G.me], true); q.opened = 1; }   // 맞히면 바로 문이 열려요(설명은 잠깐 보여 줘요) q.hold = ok ? OK_HOLD : WRONG_HOLD;
   var K = G.K[G.me];
   if (q.type === 0) $('#qOpts').querySelectorAll('button').forEach(function (b) { var i = +b.dataset.i; b.disabled = true; if (i === Q[6]) b.classList.add('ok'); else if (i === v) b.classList.add('no'); });
   var res = $('#qRes'); res.classList.remove('hide');
   var right = q.type === 0 ? Q[5][Q[6]] : Q[7];
-  if (ok) { res.className = 'qres ok'; res.innerHTML = '✅ 정답! +' + RULE.PT[q.tier] + '점 · 🚀 터보 ' + TURBO[q.tier] + '초'; beep('ok'); }
+  if (ok && q.door) { res.className = 'qres ok'; res.innerHTML = '✅ 정답! 🔓 지름길 문이 열려요 · +' + DOOR_PT + '점 · 🚀 터보 2.4초'; beep('ok'); }
+  else if (q.door) { res.className = 'qres no'; beep('no'); res.innerHTML = (v == null && q.t <= 0 ? '⏰ 시간이 다 됐어요. ' : '❌ ') + '정답은 <b>' + esc(right) + '</b>' + (q.input ? ' (내 답: ' + esc(q.input) + ')' : '') + '<span class="e">' + esc(Q[8]) + '</span><span class="e">🔒 이번 바퀴는 지름길 문이 열리지 않아요. 원래 길로 달려요(관문 문제는 그대로 풀 수 있어요).</span>';
+    G.wrongs.push({ q: Q[4], a: right, my: q.input || '(시간 초과)', e: Q[8], L: Q[1] }); }
+  else if (ok) { res.className = 'qres ok'; res.innerHTML = '✅ 정답! +' + RULE.PT[q.tier] + '점 · ' + ['', '🚀 터보 1초 · 🎁 아이템 35%', '🚀 파워 부스터 4초(1.8배 속도·핸들 보조·공격 막기) · 🎁 아이템', '🔥 슈퍼 부스터 7초(2.2배 속도·핸들 보조·공격 막기) · 🎁 좋은 아이템 (+1개 더 쌓기)'][q.tier] + (catchUp(K) ? ' · 🚀 따라잡기 보너스 ×1.5' : '') + (q.fast ? ' · ⚡ 번개 출발! +' + FAST_BONUS[q.tier] + '초' : ''); beep('ok'); }
   else {
     res.className = 'qres no'; beep('no');
-    res.innerHTML = (v == null && q.t <= 0 ? '⏰ 시간이 다 됐어요. ' : '❌ ') + '정답은 <b>' + esc(right) + '</b>' + (q.type === 1 && q.input ? ' (내 답: ' + esc(q.input) + ')' : '') + '<span class="e">' + esc(Q[8]) + '</span>';
+    var K1 = G.K[G.me], nextT = K1.gw + 1 >= RETRY_EASY ? 1 : q.tier;
+    res.innerHTML = (v == null && q.t <= 0 ? '⏰ 시간이 다 됐어요. ' : '❌ ') + '정답은 <b>' + esc(right) + '</b>' + (q.type === 1 && q.input ? ' (내 답: ' + esc(q.input) + ')' : '') + '<span class="e">' + esc(Q[8]) + '</span><span class="e">🔁 풀이를 읽고 나면 ' + (nextT < q.tier ? '⭐ 쉬운 문제' : '다른 문제') + '를 하나 더 풀어요. 맞혀야 관문이 열려요!</span>';
     G.wrongs.push({ q: Q[4], a: right, my: q.type === 0 ? (v == null ? '(시간 초과)' : Q[5][v]) : (q.input || '(시간 초과)'), e: Q[8], L: Q[1] });
   }
 }
@@ -1374,7 +1755,12 @@ function stepQ(dt) {
   var q = G.q; if (!q) return;
   if (!q.done) { q.t -= dt; if (q.t <= 0) { q.t = 0; answer(null); } updQTime(); return; }
   q.hold -= dt;
-  if (q.hold <= 0) { G.q = null; $('#qp').classList.add('hide'); leaveGate(G.K[G.me], q.ok); }
+  if (q.hold <= 0) {
+    var K = G.K[G.me]; G.q = null;
+    if (q.door) { $('#qp').classList.add('hide'); if (!q.opened) doorDone(K, q.ok); }
+    else if (q.ok) { $('#qp').classList.add('hide'); leaveGate(K, true, q.fast); }
+    else { K.gw++; openQ(K.gw >= RETRY_EASY ? 1 : q.tier); }   // 틀리면 같은 관문에서 다른 문제
+  }
 }
 
 // ===== 한 프레임 =====
@@ -1389,26 +1775,36 @@ function frame(ts) {
   if (G.net) netFrame(now);
   if (now < G.t0) {
     var c = Math.ceil((G.t0 - now) / 1000);
-    if (c !== G.cnt && c <= 3) { G.cnt = c; banner(String(c), c === 3 ? G.T.n : '', 1.1); beep('tick'); }
-    else if (c > 3 && G.cnt === 4) { G.cnt = 5; banner(G.T.n, '곧 출발해요', 1.8); }
+    if (c !== G.cnt && c <= 3) { G.cnt = c; banner(String(c), c === 3 ? G.T.n + ' · ' + TRACKS[G.T.i].sub : '', 1.1); beep('tick'); }
+    else if (c > 3 && G.cnt === 4) { G.cnt = 5; banner(G.T.n, TRACKS[G.T.i].sub, 1.8); }
   } else {
-    if (G.cnt !== 0) { G.cnt = 0; banner('출발!', '', 1.0); beep('go'); }
+    if (G.cnt !== 0) { G.cnt = 0; banner('출발!', '⚙️ 내 기어비 ' + GEARS[K0.gear].n, 1.2); beep('go'); }
+    if (G.T.sc && K0.lap === 0 && !G.scHint && K0.idx > G.T.sc.pad - 110 && K0.idx < G.T.sc.pad) { G.scHint = 1; banner('🔑 ' + G.T.sc.side + ' 노란 열쇠 판 = 지름길', '밟으면 차가 저절로 달리는 동안 비례식 □ 문제를 풀어요 (안 밟아도 돼요)', 2.4); }
     G.K.forEach(function (K) { if (K.local) { stepKart(K, dt); botGate(K, dt); } });
     bumps();
     G.K.forEach(function (K) { if (K.local) track(K, now); });
     stepItems(dt);
     stepQ(dt);
-    if (K0.roll > 0) { K0.roll -= dt; if (K0.roll <= 0) { K0.roll = 0; K0.item = K0.rollIt; setItemUI(); feed('🎁 ' + ITEMS[K0.item].e + ' ' + ITEMS[K0.item].n + '을(를) 받았어요'); } }
+    if (K0.roll > 0) { K0.roll -= dt; if (K0.roll <= 0) { K0.roll = 0; if (K0.item) K0.item2 = K0.rollIt; else K0.item = K0.rollIt; setItemUI(); feed('🎁 ' + ITEMS[K0.item].e + ' ' + ITEMS[K0.item].n + '을(를) 받았어요'); } }
   }
   G.parts = G.parts.filter(function (p) { p.t -= dt; p.x += p.vx * dt; p.y += p.vy * dt; return p.t > 0; });
   placesNow();
+  if (G.shake > 0) G.shake -= dt;
+  // 순위가 바뀌면 알려 줘요(0.5초 넘게 유지될 때만)
+  if (now >= G.t0 + 4000 && K0.st === 'race') {
+    if (G.lp == null) G.lp = K0.place;
+    if (K0.place !== G.lp) { G.lpT = (G.lpT || 0) + dt; if (G.lpT > 0.5) { var up = K0.place < G.lp; if (up) K0.upN += G.lp - K0.place; posPop(up, K0.place); G.lp = K0.place; G.lpT = 0; } } else G.lpT = 0;
+  }
+  liveRank(now);
   // 머리 위 숫자판
   $('#placeN').textContent = K0.place;
   $('#lapN').textContent = Math.min(RULE.LAPS, K0.lap + 1);
   var dots = ''; for (var g = 0; g < RULE.GATES; g++) dots += g < K0.gd || K0.st === 'fin' ? '●' : '○'; $('#gateDots').textContent = dots;
   $('#scoreN').textContent = K0.pt;
   $('#clock').textContent = now < G.t0 ? '0:00' : fmtT(now - G.t0);
-  $('#wrongway').classList.toggle('hide', !(K0.ww > 1 && K0.st === 'race'));
+  var lim0 = K0.offLim || OFF_LIMIT, offW = K0.st === 'race' && K0.offT > 0 && (K0.offT >= OFF_WARN || lim0 < OFF_LIMIT), wwW = K0.ww > 1 && K0.st === 'race';
+  $('#wrongway').textContent = offW ? (lim0 < OFF_LIMIT ? (lim0 < 1.2 ? '🌋 용암! ' : '🌊 물에 빠졌어요! ') + '곧 직전 관문에서 다시 출발' : '⚠️ 길로 돌아가요! ' + Math.ceil(OFF_LIMIT - K0.offT) + '초 뒤 직전 관문에서 다시 출발') : '↩ 거꾸로 가고 있어요!';
+  $('#wrongway').classList.toggle('hide', !(offW || wwW));
   if (bannerT > 0) { bannerT -= dt; if (bannerT <= 0) $('#banner').classList.add('hide'); }
   if (toastT > 0) { toastT -= dt; if (toastT <= 0) $('#toast').classList.add('hide'); }
   draw(now);
@@ -1512,7 +1908,7 @@ function gameRoom(r) {
   if (r.ps) G.S = r.ps;
   (r.fires || []).forEach(onFire);
 }
-function flagsOf(K) { return (K.spin > 0 ? 1 : 0) | (K.shield > 0 ? 2 : 0) | (K.boost > 0 ? 4 : 0) | (K.st === 'gate' ? 8 : 0) | (K.inv > 0 ? 16 : 0) | (K.slow > 0 ? 32 : 0) | (K.st === 'fin' ? 64 : 0); }
+function flagsOf(K) { return (K.spin > 0 ? 1 : 0) | (K.shield > 0 ? 2 : 0) | (K.boost > 0 ? 4 : 0) | (K.st === 'gate' || K.dq ? 8 : 0) | (K.inv > 0 ? 16 : 0) | (K.slow > 0 ? 32 : 0) | (K.st === 'fin' ? 64 : 0); }
 function netFrame(now) {
   var me = G.K[G.me];
   if (Net.pushState && now - G.pushAt > 100) {
@@ -1562,20 +1958,79 @@ function showResult(g0) {
   $('#rsWrong').innerHTML = g0.wrongs.length ? g0.wrongs.map(function (w) {
     return '<div class="w"><div>[' + esc(LNAME[w.L]) + '] ' + esc(w.q) + '</div><div class="a">정답: ' + esc(w.a) + ' · 내 답: ' + esc(w.my) + '</div><div class="e">' + esc(w.e) + '</div></div>';
   }).join('') : '<div class="note">틀린 문제가 없어요. 멋져요! 🎉</div>';
+  // 칭호: 순위와 상관없이 내가 해낸 것(못 받은 것은 다음 목표로 흐리게 보여 줘요)
+  var fin0 = !!g0.S.fin[g0.me], acc = me.nq ? me.ok / me.nq : 0;
+  var BD = [
+    ['🏁', '완주', fin0, '3바퀴를 끝까지 달리기'],
+    ['🎯', '정답왕', me.nq >= 6 && acc >= 0.9, '정답률 90% 이상 (지금 ' + Math.round(acc * 100) + '%)'],
+    ['⚡', '번개 계산', me.fastN >= 5, '번개 출발 5번 이상 (지금 ' + me.fastN + '번)'],
+    ['⭐', '도전 정신', me.t3N >= 4, '⭐⭐⭐ 문제 4개 이상 정답 (지금 ' + me.t3N + '개)'],
+    ['🔑', '지름길 열쇠', me.keyN >= 2, '열쇠 문제 2번 이상 정답 (지금 ' + me.keyN + '번)'],
+    ['🎁', '아이템 활용', me.itN >= 5, '아이템 5번 이상 쓰기 (지금 ' + me.itN + '번)'],
+    ['🚀', '역전의 명수', me.upN >= 3, '순위 3계단 이상 끌어올리기 (지금 ' + me.upN + '계단)'],
+    ['🛡️', '무사고', fin0 && me.hitN === 0 && me.rsN === 0, '공격에 안 맞고 길 밖 다시 출발 없이 완주 (맞음 ' + me.hitN + ' · 다시 출발 ' + me.rsN + ')']];
+  var got = BD.filter(function (b) { return b[2]; }).length;
+  $('#rsBadgeH').textContent = '🏅 내가 받은 칭호 ' + got + ' / ' + BD.length;
+  $('#rsBadge').innerHTML = BD.map(function (b) { return '<div class="bd' + (b[2] ? '' : ' off') + '"><span class="i">' + b[0] + '</span><span class="t"><b>' + b[1] + '</b><small>' + esc(b[3]) + '</small></span></div>'; }).join('');
+  $('#rsCoinCard').classList.add('hide');
   show('result');
   if (g0.net) saveNet(g0, false);
   else {
     $('#rsSaveCard').classList.add('hide');
+    if (!garOnline() && myName()) { var tot = addLocalCoins(myScore); showCoin('🪙 이번 판 <b>+' + myScore + '코인</b> · 모은 코인 ' + tot + '<br><small>첫 화면 🛠️ 정비소에서 부품을 살 수 있어요</small>'); }
+    else showCoin('🪙 컴퓨터와 연습한 판은 코인이 없어요. 친구와 온라인 경주를 하면 최종 점수만큼 코인을 받아요.');
     var best = store.get('best', []); best.push({ n: me.name, s: myScore, r: rank[g0.me] + '/' + g0.n, d: new Date().toLocaleDateString('ko-KR') });
     best.sort(function (a, b) { return b.s - a.s; }); store.set('best', best.slice(0, 10));
   }
   if (G === g0) G = null;
 }
+// ===== 🛠️ 정비소 =====
+// 코인 = 경주 최종 점수. 온라인판은 파이어베이스(반 코드+이름)에, 연습 화면은 이 기기에 저장해요.
+// 온라인판에서 컴퓨터와 연습한 판은 코인이 없어요(쉬운 컴퓨터와 여러 번 해서 코인을 모으는 일을 막아요).
+function normG(g) { g = g || {}; var lv = [0, 1, 2, 3].map(function (i) { var v = g.lv && +g.lv[i]; return v > 0 ? Math.min(PART_MAX, v | 0) : 0; }); return { c: Math.max(0, +g.c | 0), lv: lv }; }
+function garOnline() { return !!(Net && !(Net.error && Net.error())); }
+function garLocalKey() { return myCls() + '|' + myName(); }
+function garLocalAll() { var a = store.get('garage', {}); return a && typeof a === 'object' ? a : {}; }
+function loadGarage() {
+  var nm = myName(), cls = myCls();
+  if (!nm || (garOnline() && !cls)) { GARAGE = normG(); renderGarage(garOnline() ? '이름과 반 코드를 쓰면 내 정비소가 열려요.' : '이름을 쓰면 내 정비소가 열려요.'); return; }
+  if (garOnline()) {
+    renderGarage('불러오는 중…');
+    Net.call('getGarage', { cls: cls, name: nm }).then(function (g) { if (myName() === nm && myCls() === cls) { GARAGE = normG(g); renderGarage(); } }).catch(function (e) { renderGarage('정비소를 못 불러왔어요: ' + (e && e.message ? e.message : e)); });
+  } else { GARAGE = normG(garLocalAll()[garLocalKey()]); renderGarage(); }
+}
+function renderGarage(msg) {
+  $('#shCoin').textContent = '🪙 ' + GARAGE.c;
+  $('#shNote').textContent = garOnline() ? '온라인 경주의 최종 점수만큼 코인이 쌓여요(컴퓨터와 연습한 판은 코인 없음). 부품은 다음 경주부터 내 차에 달려요.' : '이 기기에 저장돼요. 컴퓨터와 연습한 판의 최종 점수만큼 코인이 쌓여요.';
+  $('#shParts').innerHTML = PARTS.map(function (p, i) {
+    var l = GARAGE.lv[i], max = l >= PART_MAX, cost = max ? 0 : PART_COST[l];
+    return '<div class="pt"><span class="i">' + p.e + '</span><span><b>' + p.n + '</b><span class="pip">' + '●●●'.slice(0, l) + '○○○'.slice(0, PART_MAX - l) + '</span><small>' + (l ? '지금: ' + esc(p.u(l)) : '아직 없어요') + (max ? '' : ' → 다음: ' + esc(p.u(l + 1))) + '</small></span>' +
+      '<button data-part="' + i + '"' + (max || GARAGE.c < cost ? ' disabled' : '') + '>' + (max ? '최고 단계' : '🪙 ' + cost) + '</button></div>';
+  }).join('');
+  $('#shParts').querySelectorAll('button[data-part]').forEach(function (b) { b.onclick = function () { buyPart(+b.dataset.part); }; });
+  $('#shMsg').textContent = msg || '';
+}
+function buyPart(i) {
+  var nm = myName(), cls = myCls(); if (!nm) return;
+  if (garOnline()) {
+    renderGarage('사는 중…');
+    Net.call('buyPart', { cls: cls, name: nm, p: i }).then(function (r) { if (r && r.g) GARAGE = normG(r.g); renderGarage((r && r.ok ? '✅ ' : '❌ ') + (r && r.msg || '')); }).catch(function (e) { renderGarage('❌ ' + (e && e.message ? e.message : e)); });
+    return;
+  }
+  var all = garLocalAll(), g = normG(all[garLocalKey()]), l = g.lv[i];
+  if (l >= PART_MAX) return renderGarage('이미 최고 단계예요.');
+  if (g.c < PART_COST[l]) return renderGarage('코인이 모자라요.');
+  g.c -= PART_COST[l]; g.lv[i] = l + 1; all[garLocalKey()] = g; store.set('garage', all); GARAGE = g;
+  beep('ok'); renderGarage('✅ ' + PARTS[i].n + ' ' + (l + 1) + '단계! ' + PARTS[i].u(l + 1));
+}
+function addLocalCoins(n) { var all = garLocalAll(), g = normG(all[garLocalKey()]); g.c += Math.max(0, n | 0); all[garLocalKey()] = g; store.set('garage', all); GARAGE = g; return g.c; }
+function showCoin(text) { $('#rsCoinCard').classList.remove('hide'); $('#rsCoin').innerHTML = text; }
 function saveNet(g0, quit) {
   $('#rsSaveCard').classList.remove('hide'); $('#rsSave').textContent = '기록 저장 중…';
   var me = g0.K[g0.me];
   Net.call('saveResult', { code: g0.net.code, sid: SID, ok: me.ok, nq: me.nq, pt: me.pt, prog: me.pg, quit: quit ? 1 : 0 }).then(function (r) {
     $('#rsSave').textContent = (r && r.ok ? '✅ ' : '❌ ') + (r && r.msg ? r.msg : ''); stopSync();
+    if (r && r.ok && r.coin != null) showCoin('🪙 이번 판 <b>+' + r.coin + '코인</b> · 모은 코인 ' + r.coins + '<br><small>첫 화면 🛠️ 정비소에서 부품을 살 수 있어요</small>');
   }).catch(function (e) { $('#rsSave').textContent = '❌ 기록하지 못했어요: ' + (e && e.message ? e.message : e); stopSync(); });
 }
 
@@ -1583,7 +2038,7 @@ function saveNet(g0, quit) {
 function myName() { return cleanName($('#nm').value, 10); }
 function myCls() { return cleanCls($('#cl').value); }
 function needName() { if (!myName()) { $('#homeMsg').textContent = '이름을 먼저 써 주세요.'; $('#nm').focus(); return true; } return false; }
-function saveForm() { store.set('form', { nm: $('#nm').value, cl: $('#cl').value, lv: LV, tr: TR }); }
+function saveForm() { store.set('form', { nm: $('#nm').value, cl: $('#cl').value, lv: LV, tr: TR, g: GEAR }); }
 function startCpu(k) {
   if (needName()) return;
   saveForm(); LAST = { mode: 'cpu', cpu: k };
@@ -1595,6 +2050,8 @@ function startCpu(k) {
 document.querySelectorAll('[data-cpu]').forEach(function (b) { b.onclick = function () { startCpu(+b.dataset.cpu); }; });
 function setSeg(sel, attr, v) { document.querySelectorAll(sel + ' button').forEach(function (b) { b.classList.toggle('on', +b.getAttribute(attr) === v); }); }
 document.querySelectorAll('#lvSeg button').forEach(function (b) { b.onclick = function () { LV = +b.dataset.lv; setSeg('#lvSeg', 'data-lv', LV); saveForm(); }; });
+function gearInfo() { $('#gearInfo').textContent = '⚙️ ' + GEARS[GEAR].n + ' — ' + GEARS[GEAR].d; }
+document.querySelectorAll('#gearSeg button').forEach(function (b) { b.onclick = function () { GEAR = +b.dataset.g; setSeg('#gearSeg', 'data-g', GEAR); gearInfo(); saveForm(); }; });
 document.querySelectorAll('#trSeg button').forEach(function (b) { b.onclick = function () { TR = +b.dataset.tr; setSeg('#trSeg', 'data-tr', TR); saveForm(); }; });
 var quitArm = 0;
 $('#quitBtn').onclick = function () {
@@ -1608,6 +2065,7 @@ $('#rsHome').onclick = function () { G = null; show('home'); loadRank(); };
 $('#rsAgain').onclick = function () { G = null; if (LAST.mode === 'net') openLobby(); else startCpu(LAST.cpu || 4); };
 ['#nm', '#cl'].forEach(function (id) { $(id).addEventListener('change', function () { saveForm(); loadRank(); }); });
 function loadRank() {
+  loadGarage();
   var box = $('#rkHome');
   if (!Net) {
     $('#rkTitle').textContent = '내 최고 기록 (이 기기)';
@@ -1681,6 +2139,8 @@ $('#lbBack').onclick = function () { var c = LB.code; stopSync(); LB.code = null
   if (f.nm) $('#nm').value = f.nm; if (f.cl) $('#cl').value = f.cl;
   if (f.lv != null) { LV = f.lv; setSeg('#lvSeg', 'data-lv', LV); }
   if (f.tr != null) { TR = f.tr; setSeg('#trSeg', 'data-tr', TR); }
+  if (f.g != null && GEARS[f.g]) { GEAR = f.g; setSeg('#gearSeg', 'data-g', GEAR); }
+  gearInfo();
   $('#qCount').textContent = QD.length;
   if (/KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\//i.test(navigator.userAgent)) $('#inapp').classList.remove('hide');
   if (!Net) { $('#goNet').disabled = true; $('#netSub').textContent = '이 화면(미리보기)에서는 컴퓨터와 연습만 돼요. 온라인 경주는 선생님이 올린 게임 주소에서 해요.'; }
